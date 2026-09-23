@@ -1,0 +1,14 @@
+# Compilação e binários gerados
+build/
+DerivedData/
+
+# Arquivos do sistema macOS
+.DS_Store
+*.swp
+*~
+
+# Configurações de usuário do Xcode
+*.xcuserstate
+xcuserdata/
+*.xcworkspace/xcuserdata/
+*.xcuserdatad/
