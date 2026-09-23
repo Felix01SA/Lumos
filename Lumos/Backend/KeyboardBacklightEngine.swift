@@ -10,6 +10,7 @@ import Foundation
 import Combine
 import IOKit
 import IOKit.hid
+import IOKit.pwr_mgt
 
 // MARK: - Keyboard Backlight Engine
 
@@ -33,6 +34,15 @@ public final class KeyboardBacklightEngine: ObservableObject {
     @Published public private(set) var isBreathing: Bool = false
     @Published public private(set) var isIdleDimmed: Bool = false
     @Published public private(set) var touchBarSyncStage: TouchBarController.TouchBarDisplayStage = .active
+    
+    // Power & Display state tracking (Repouso, Tela desligada, Tampa fechada)
+    @Published public private(set) var isScreenSleeping: Bool = false
+    @Published public private(set) var isSystemSleeping: Bool = false
+    @Published public private(set) var isLidClosed: Bool = false
+    @Published public private(set) var isPowerSavingDimmed: Bool = false
+    
+    private var notifyPort: IONotificationPortRef?
+    private var rootDomainNotifier: io_object_t = 0
     
     public var isTouchBarSleeping: Bool {
         touchBarSyncStage == .sleeping
@@ -78,6 +88,12 @@ public final class KeyboardBacklightEngine: ObservableObject {
     
     deinit {
         breathingTimer?.invalidate()
+        if let port = notifyPort {
+            IONotificationPortDestroy(port)
+        }
+        if rootDomainNotifier != 0 {
+            IOObjectRelease(rootDomainNotifier)
+        }
     }
     
     // MARK: - Direct WebHID Setup
@@ -122,38 +138,152 @@ public final class KeyboardBacklightEngine: ObservableObject {
         print("[Lumos] Connected to \(directDevices.count) direct Keyboard Backlight device(s). Hardware available: \(isHardwareAvailable)")
     }
     
-    // MARK: - Sleep & Wake Listeners
+    // MARK: - Sleep, Display & Clamshell Listeners (Repouso, Tela desligada, Tampa fechada)
     
     private func setupSleepWakeListeners() {
-        // macOS resets keyboard backlight to 0 when sleeping. Restore on wake!
-        NSWorkspace.shared.notificationCenter.publisher(for: NSWorkspace.didWakeNotification)
+        let center = NSWorkspace.shared.notificationCenter
+        
+        // 1. System Sleep (quando o MacBook entrar em repouso)
+        center.publisher(for: NSWorkspace.willSleepNotification)
             .sink { [weak self] _ in
                 Task { @MainActor [weak self] in
                     guard let self = self else { return }
-                    print("[Lumos] Mac woke up from sleep. Restoring backlight...")
-                    self.refreshDirectDevices()
-                    if self.isOn {
-                        self.applyBrightnessToHardware(self.brightness)
-                    }
+                    print("[Lumos] System entering sleep. Turning off keyboard backlight...")
+                    self.isSystemSleeping = true
+                    self.evaluateBacklightPowerState()
                 }
             }
             .store(in: &cancellables)
         
-        NSWorkspace.shared.notificationCenter.publisher(for: NSWorkspace.screensDidWakeNotification)
+        center.publisher(for: NSWorkspace.didWakeNotification)
             .sink { [weak self] _ in
                 Task { @MainActor [weak self] in
                     guard let self = self else { return }
-                    if self.isOn {
-                        self.applyBrightnessToHardware(self.brightness)
-                    }
+                    print("[Lumos] System woke up from sleep. Evaluating backlight...")
+                    self.isSystemSleeping = false
+                    self.refreshDirectDevices()
+                    self.evaluateBacklightPowerState()
                 }
             }
             .store(in: &cancellables)
+        
+        // 2. Display Sleep (quando a tela apagar)
+        center.publisher(for: NSWorkspace.screensDidSleepNotification)
+            .sink { [weak self] _ in
+                Task { @MainActor [weak self] in
+                    guard let self = self else { return }
+                    print("[Lumos] Display turned off. Turning off keyboard backlight...")
+                    self.isScreenSleeping = true
+                    self.evaluateBacklightPowerState()
+                }
+            }
+            .store(in: &cancellables)
+        
+        center.publisher(for: NSWorkspace.screensDidWakeNotification)
+            .sink { [weak self] _ in
+                Task { @MainActor [weak self] in
+                    guard let self = self else { return }
+                    print("[Lumos] Display turned on. Evaluating backlight...")
+                    self.isScreenSleeping = false
+                    self.evaluateBacklightPowerState()
+                }
+            }
+            .store(in: &cancellables)
+            
+        // 3. Clamshell / Lid Listener (quando a tela baixar)
+        setupClamshellListener()
+    }
+    
+    private func setupClamshellListener() {
+        let matching = IOServiceMatching("IOPMrootDomain")
+        let rootDomain = IOServiceGetMatchingService(kIOMainPortDefault, matching)
+        guard rootDomain != 0 else { return }
+        
+        // Initial state
+        self.isLidClosed = checkIsLidClosed()
+        
+        let port = IONotificationPortCreate(kIOMainPortDefault)
+        self.notifyPort = port
+        
+        if let runLoopSrc = IONotificationPortGetRunLoopSource(port)?.takeUnretainedValue() {
+            CFRunLoopAddSource(CFRunLoopGetMain(), runLoopSrc, .defaultMode)
+        }
+        
+        let callback: IOServiceInterestCallback = { (refcon, service, messageType, messageArgument) in
+            guard let refcon = refcon else { return }
+            let engine = Unmanaged<KeyboardBacklightEngine>.fromOpaque(refcon).takeUnretainedValue()
+            Task { @MainActor in
+                engine.handleClamshellMessage()
+            }
+        }
+        
+        let selfPtr = Unmanaged.passUnretained(self).toOpaque()
+        let kr = IOServiceAddInterestNotification(
+            port,
+            rootDomain,
+            kIOGeneralInterest,
+            callback,
+            selfPtr,
+            &rootDomainNotifier
+        )
+        if kr != KERN_SUCCESS {
+            print("[Lumos] Warning: Failed to register clamshell interest notification: \(kr)")
+        }
+        IOObjectRelease(rootDomain)
+    }
+    
+    public func handleClamshellMessage() {
+        let closed = checkIsLidClosed()
+        if self.isLidClosed != closed {
+            self.isLidClosed = closed
+            print("[Lumos] MacBook lid state changed: closed = \(closed)")
+            evaluateBacklightPowerState()
+        }
+    }
+    
+    public func checkIsLidClosed() -> Bool {
+        let service = IOServiceGetMatchingService(kIOMainPortDefault, IOServiceMatching("IOPMrootDomain"))
+        guard service != 0 else { return false }
+        defer { IOObjectRelease(service) }
+        if let prop = IORegistryEntryCreateCFProperty(service, "AppleClamshellState" as CFString, kCFAllocatorDefault, 0)?.takeRetainedValue() as? Bool {
+            return prop
+        }
+        return false
+    }
+    
+    public func evaluateBacklightPowerState() {
+        guard LumosSettings.shared.sleepWithDisplayAndClamshell else { return }
+        let shouldTurnOff = isSystemSleeping || isScreenSleeping || isLidClosed
+        
+        if shouldTurnOff {
+            stopAnimation()
+            isPowerSavingDimmed = true
+            applyBrightnessToHardware(0.0)
+        } else {
+            stopAnimation()
+            if isPowerSavingDimmed {
+                isPowerSavingDimmed = false
+                if isOn {
+                    // Reset Touch Bar stage to active on wake
+                    if TouchBarController.isTouchBarAvailable {
+                        TouchBarController.shared.updateTouchBarStage(.active)
+                        touchBarSyncStage = .active
+                        isIdleDimmed = false
+                    }
+                    applyBrightnessToHardware(brightness)
+                }
+            }
+        }
     }
     
     // MARK: - Hardware Control
     
     public func applyBrightnessToHardware(_ normalized: Double) {
+        if LumosSettings.shared.sleepWithDisplayAndClamshell && (isSystemSleeping || isScreenSleeping || isLidClosed) && normalized > 0.001 {
+            print("[Lumos] Blocked hardware brightness \(normalized) because system/display is sleeping or lid is closed.")
+            return
+        }
+        
         let rawVal = normalizedToRaw(normalized)
         
         if directDevices.isEmpty {
@@ -214,9 +344,17 @@ public final class KeyboardBacklightEngine: ObservableObject {
         return min(max(Double(raw) / 512.0, 0.0), 1.0)
     }
     
+    private var animationTimer: Timer?
+    
+    public func stopAnimation() {
+        animationTimer?.invalidate()
+        animationTimer = nil
+    }
+    
     // MARK: - User Actions
     
     public func togglePower() {
+        stopAnimation()
         if isBreathing {
             stopBreathingEffect()
         }
@@ -236,6 +374,7 @@ public final class KeyboardBacklightEngine: ObservableObject {
     }
     
     public func setBrightness(_ level: Double) {
+        stopAnimation()
         if isBreathing {
             stopBreathingEffect()
         }
@@ -249,6 +388,7 @@ public final class KeyboardBacklightEngine: ObservableObject {
     }
     
     public func applyPreset(_ preset: Double) {
+        stopAnimation()
         if isBreathing {
             stopBreathingEffect()
         }
@@ -264,8 +404,10 @@ public final class KeyboardBacklightEngine: ObservableObject {
     // MARK: - Touch Bar Sync Support (Dimming & Sleep)
     
     public func enterTouchBarDim(targetLevel: Double = 0.15) {
+        guard !isSystemSleeping && !isScreenSleeping && !isLidClosed else { return }
         guard LumosSettings.shared.syncBacklightWithTouchBar else { return }
         guard isOn && !isBreathing && touchBarSyncStage == .active else { return }
+        stopAnimation()
         preDimBrightness = brightness
         touchBarSyncStage = .dimmed
         isIdleDimmed = true
@@ -276,12 +418,18 @@ public final class KeyboardBacklightEngine: ObservableObject {
     public func enterTouchBarSleep() {
         guard LumosSettings.shared.syncBacklightWithTouchBar else { return }
         guard isOn && !isBreathing && touchBarSyncStage != .sleeping else { return }
+        stopAnimation()
         if touchBarSyncStage == .active {
             preDimBrightness = brightness
         }
         touchBarSyncStage = .sleeping
         isIdleDimmed = true
-        animateBrightness(from: brightness, to: 0.0, duration: 0.6)
+        
+        if isSystemSleeping || isScreenSleeping || isLidClosed {
+            applyBrightnessToHardware(0.0)
+        } else {
+            animateBrightness(from: brightness, to: 0.0, duration: 0.6)
+        }
     }
     
     public func exitTouchBarSleep() {
@@ -289,46 +437,71 @@ public final class KeyboardBacklightEngine: ObservableObject {
     }
     
     public func wakeTouchBarBacklight() {
+        guard !isSystemSleeping && !isScreenSleeping && !isLidClosed else { return }
         guard touchBarSyncStage != .active else { return }
+        stopAnimation()
+        let startLevel = (touchBarSyncStage == .dimmed) ? LumosSettings.shared.touchBarDimLevel : 0.0
         touchBarSyncStage = .active
         isIdleDimmed = false
-        animateBrightness(from: brightness, to: preDimBrightness, duration: 0.3)
+        let target = preDimBrightness > 0.01 ? preDimBrightness : (LumosSettings.shared.lastActiveBrightness > 0.01 ? LumosSettings.shared.lastActiveBrightness : 0.75)
+        animateBrightness(from: startLevel, to: target, duration: 0.3)
     }
     
     public func enterIdleDim(targetLevel: Double = 0.0) {
+        guard !isSystemSleeping && !isScreenSleeping && !isLidClosed else { return }
         guard LumosSettings.shared.autoDimEnabled else { return }
         guard isOn && !isIdleDimmed && !isBreathing && touchBarSyncStage == .active else { return }
+        stopAnimation()
         preDimBrightness = brightness
         isIdleDimmed = true
         animateBrightness(from: brightness, to: targetLevel, duration: 0.6)
     }
     
     public func exitIdleDim() {
+        guard !isSystemSleeping && !isScreenSleeping && !isLidClosed else { return }
         guard isIdleDimmed && touchBarSyncStage == .active else { return }
+        stopAnimation()
         isIdleDimmed = false
-        animateBrightness(from: brightness, to: preDimBrightness, duration: 0.3)
+        animateBrightness(from: 0.0, to: preDimBrightness, duration: 0.3)
     }
     
     private func animateBrightness(from start: Double, to end: Double, duration: TimeInterval) {
-        let steps = 15
+        stopAnimation()
+        
+        if isSystemSleeping || isScreenSleeping || isLidClosed {
+            applyBrightnessToHardware(0.0)
+            return
+        }
+        
+        guard abs(start - end) > 0.005 else {
+            applyBrightnessToHardware(end)
+            return
+        }
+        
+        let steps = 12
         let stepInterval = duration / Double(steps)
         var currentStep = 0
         
-        Timer.scheduledTimer(withTimeInterval: stepInterval, repeats: true) { [weak self] timer in
+        animationTimer = Timer.scheduledTimer(withTimeInterval: stepInterval, repeats: true) { [weak self] timer in
             Task { @MainActor [weak self] in
                 guard let self = self else { timer.invalidate(); return }
+                
+                if self.isSystemSleeping || self.isScreenSleeping || self.isLidClosed {
+                    self.stopAnimation()
+                    self.applyBrightnessToHardware(0.0)
+                    return
+                }
+                
                 currentStep += 1
                 let progress = Double(currentStep) / Double(steps)
                 let current = start + (end - start) * progress
                 
                 self.isApplyingInternalState = true
-                self.brightness = current
                 self.applyBrightnessToHardware(current)
                 self.isApplyingInternalState = false
                 
                 if currentStep >= steps {
-                    timer.invalidate()
-                    self.brightness = end
+                    self.stopAnimation()
                     self.applyBrightnessToHardware(end)
                 }
             }

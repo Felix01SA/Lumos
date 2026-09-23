@@ -22,6 +22,7 @@ public final class LumosSettings: ObservableObject {
         static let touchBarDimLevel = "lumos.v2.touchBarDimLevel"
         static let touchBarDimSeconds = "lumos.v2.touchBarDimSeconds"
         static let touchBarSleepSeconds = "lumos.v2.touchBarSleepSeconds"
+        static let sleepWithDisplayAndClamshell = "lumos.v2.sleepWithDisplayAndClamshell"
     }
     
     @Published public var autoDimEnabled: Bool {
@@ -64,6 +65,10 @@ public final class LumosSettings: ObservableObject {
         didSet { UserDefaults.standard.set(touchBarSleepSeconds, forKey: Keys.touchBarSleepSeconds) }
     }
     
+    @Published public var sleepWithDisplayAndClamshell: Bool {
+        didSet { UserDefaults.standard.set(sleepWithDisplayAndClamshell, forKey: Keys.sleepWithDisplayAndClamshell) }
+    }
+    
     private init() {
         let defaults = UserDefaults.standard
         self.autoDimEnabled = defaults.object(forKey: Keys.autoDimEnabled) as? Bool ?? false
@@ -78,5 +83,6 @@ public final class LumosSettings: ObservableObject {
         self.touchBarDimLevel = defaults.object(forKey: Keys.touchBarDimLevel) as? Double ?? 0.15
         self.touchBarDimSeconds = defaults.object(forKey: Keys.touchBarDimSeconds) as? Double ?? 60.0
         self.touchBarSleepSeconds = defaults.object(forKey: Keys.touchBarSleepSeconds) as? Double ?? 75.0
+        self.sleepWithDisplayAndClamshell = defaults.object(forKey: Keys.sleepWithDisplayAndClamshell) as? Bool ?? true
     }
 }

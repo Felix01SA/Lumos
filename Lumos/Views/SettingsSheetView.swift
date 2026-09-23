@@ -150,10 +150,57 @@ public struct SettingsView: View {
                         .padding(.leading, 18)
                         .padding(.top, 2)
                     }
+                    
+                    Toggle("Apagar ao fechar a tampa ou quando a tela apagar", isOn: $settings.sleepWithDisplayAndClamshell)
+                        .toggleStyle(.checkbox)
+                        .padding(.top, 4)
                 } else {
-                    Text("Este dispositivo não possui Touch Bar física integrada.")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("Este Mac não possui Touch Bar física integrada.")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                        
+                        Toggle("Apagar ao entrar em repouso, fechar a tampa ou desligar tela", isOn: $settings.sleepWithDisplayAndClamshell)
+                            .toggleStyle(.checkbox)
+                            .padding(.top, 2)
+                        
+                        Text("Desliga automaticamente a iluminação do teclado quando o MacBook entrar em repouso, quando a tela apagar ou ao baixar a tampa do Mac, restaurando o brilho ao retornar.")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                        
+                        HStack(spacing: 10) {
+                            HStack(spacing: 5) {
+                                Circle()
+                                    .fill(engine.isScreenSleeping ? Color.orange : Color.green)
+                                    .frame(width: 7, height: 7)
+                                Text(engine.isScreenSleeping ? "Tela desligada" : "Tela ativa")
+                                    .font(.caption2.weight(.medium))
+                                    .foregroundStyle(engine.isScreenSleeping ? Color.orange : Color.green)
+                            }
+                            .padding(.horizontal, 7)
+                            .padding(.vertical, 3)
+                            .background(
+                                Capsule()
+                                    .fill((engine.isScreenSleeping ? Color.orange : Color.green).opacity(0.12))
+                            )
+                            
+                            HStack(spacing: 5) {
+                                Circle()
+                                    .fill(engine.isLidClosed ? Color.orange : Color.green)
+                                    .frame(width: 7, height: 7)
+                                Text(engine.isLidClosed ? "Tampa fechada" : "Tampa aberta")
+                                    .font(.caption2.weight(.medium))
+                                    .foregroundStyle(engine.isLidClosed ? Color.orange : Color.green)
+                            }
+                            .padding(.horizontal, 7)
+                            .padding(.vertical, 3)
+                            .background(
+                                Capsule()
+                                    .fill((engine.isLidClosed ? Color.orange : Color.green).opacity(0.12))
+                            )
+                        }
+                        .padding(.top, 2)
+                    }
                 }
             }
             .frame(maxWidth: .infinity, alignment: .leading)
@@ -219,7 +266,7 @@ public struct SettingsView: View {
             }
         }
         .padding(20)
-        .frame(width: 440, height: 535)
+        .frame(width: 440, height: 560)
     }
 }
 

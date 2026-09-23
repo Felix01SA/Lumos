@@ -32,7 +32,6 @@ public final class IdleActivityMonitor: ObservableObject {
         self.settings = .shared
         startMonitoring()
         setupTouchBarStateObserver()
-        setupWorkspaceNotifications()
     }
     
     public init(engine: KeyboardBacklightEngine, settings: LumosSettings) {
@@ -40,7 +39,6 @@ public final class IdleActivityMonitor: ObservableObject {
         self.settings = settings
         startMonitoring()
         setupTouchBarStateObserver()
-        setupWorkspaceNotifications()
     }
     
     deinit {
@@ -87,6 +85,9 @@ public final class IdleActivityMonitor: ObservableObject {
     }
     
     private func handleTouchBarStateChange(token: Int32) {
+        // Never wake or change backlight if system or screen is sleeping or lid is closed
+        guard !engine.isSystemSleeping && !engine.isScreenSleeping && !engine.isLidClosed else { return }
+        
         var state: UInt64 = 0
         notify_get_state(token, &state)
         
@@ -106,6 +107,9 @@ public final class IdleActivityMonitor: ObservableObject {
     }
     
     private func evaluateTouchBarStatus() {
+        // Never wake or change backlight if system or screen is sleeping or lid is closed
+        guard !engine.isSystemSleeping && !engine.isScreenSleeping && !engine.isLidClosed else { return }
+        
         let status = TouchBarController.getTouchBarStatus()
         guard status != -1 else { return }
         if status == 5 {
@@ -121,35 +125,20 @@ public final class IdleActivityMonitor: ObservableObject {
         }
     }
     
-    private func setupWorkspaceNotifications() {
-        NSWorkspace.shared.notificationCenter.publisher(for: NSWorkspace.screensDidSleepNotification)
-            .sink { [weak self] _ in
-                Task { @MainActor [weak self] in
-                    guard let self = self else { return }
-                    if self.settings.syncBacklightWithTouchBar && TouchBarController.isTouchBarAvailable {
-                        TouchBarController.shared.updateTouchBarStage(.sleeping)
-                        self.engine.enterTouchBarSleep()
-                    }
-                }
-            }
-            .store(in: &cancellables)
-            
-        NSWorkspace.shared.notificationCenter.publisher(for: NSWorkspace.screensDidWakeNotification)
-            .sink { [weak self] _ in
-                Task { @MainActor [weak self] in
-                    guard let self = self else { return }
-                    if self.settings.syncBacklightWithTouchBar && TouchBarController.isTouchBarAvailable {
-                        TouchBarController.shared.updateTouchBarStage(.active)
-                        self.engine.wakeTouchBarBacklight()
-                    }
-                }
-            }
-            .store(in: &cancellables)
-    }
-    
     // MARK: - Periodic HID Activity Evaluation
     
     private func checkActivity() {
+        // Periodic check for lid status across all MacBooks
+        let lidClosed = engine.checkIsLidClosed()
+        if engine.isLidClosed != lidClosed {
+            engine.handleClamshellMessage()
+        }
+        
+        // If Mac is sleeping, display is off, or lid is closed: STOP immediately, do not evaluate activity or wake backlight!
+        guard !engine.isSystemSleeping && !engine.isScreenSleeping && !engine.isLidClosed else {
+            return
+        }
+        
         guard let anyEvent = CGEventType(rawValue: ~0) else { return }
         let elapsed = CGEventSource.secondsSinceLastEventType(.hidSystemState, eventType: anyEvent)
         self.idleSeconds = elapsed
