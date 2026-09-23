@@ -96,7 +96,6 @@ public final class TouchBarController: NSObject, ObservableObject, NSTouchBarDel
     public static let preset50Id = NSTouchBarItem.Identifier("dev.felix01sa.lumos.preset.50")
     public static let preset75Id = NSTouchBarItem.Identifier("dev.felix01sa.lumos.preset.75")
     public static let preset100Id = NSTouchBarItem.Identifier("dev.felix01sa.lumos.preset.100")
-    public static let breathingId = NSTouchBarItem.Identifier("dev.felix01sa.lumos.breathing")
     
     // Hardware Touch Bar availability & status
     nonisolated public static let isTouchBarAvailable: Bool = {
@@ -154,7 +153,6 @@ public final class TouchBarController: NSObject, ObservableObject, NSTouchBarDel
     private var powerButtons: [NSButton] = []
     private var sliders: [NSSlider] = []
     private var presetButtons: [Int: [NSButton]] = [:]
-    private var breathingButtons: [NSButton] = []
     
     private let engine: KeyboardBacklightEngine
     private let settings: LumosSettings
@@ -287,10 +285,6 @@ public final class TouchBarController: NSObject, ObservableObject, NSTouchBarDel
         engine.applyPreset(val)
     }
     
-    @objc private func breathingTapped() {
-        engine.toggleBreathingEffect()
-    }
-    
     // MARK: - State Synchronization
     
     private func observeEngine() {
@@ -316,20 +310,6 @@ public final class TouchBarController: NSObject, ObservableObject, NSTouchBarDel
                     btn.contentTintColor = on ? .systemYellow : .secondaryLabelColor
                 }
                 self.updatePresetButtonHighlights(currentBrightness: self.engine.brightness, isOn: on)
-            }
-            .store(in: &cancellables)
-            
-        engine.$isBreathing
-            .receive(on: DispatchQueue.main)
-            .sink { [weak self] breathing in
-                guard let self = self else { return }
-                for btn in self.breathingButtons {
-                    if let squareBtn = btn as? SquareTouchBarButton {
-                        squareBtn.isActive = breathing
-                    } else {
-                        btn.bezelColor = breathing ? .controlAccentColor : nil
-                    }
-                }
             }
             .store(in: &cancellables)
     }

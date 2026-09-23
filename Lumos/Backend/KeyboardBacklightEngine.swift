@@ -31,7 +31,6 @@ public final class KeyboardBacklightEngine: ObservableObject {
     @Published public private(set) var isHardwareAvailable: Bool = false
     @Published public private(set) var hardwareModel: String = "MacBook Keyboard Backlight"
     @Published public private(set) var isOn: Bool = false
-    @Published public private(set) var isBreathing: Bool = false
     @Published public private(set) var isIdleDimmed: Bool = false
     @Published public private(set) var touchBarSyncStage: TouchBarController.TouchBarDisplayStage = .active
     
@@ -70,8 +69,6 @@ public final class KeyboardBacklightEngine: ObservableObject {
     }
     
     private var isApplyingInternalState: Bool = false
-    private var breathingTimer: Timer?
-    private var breathingAngle: Double = 0.0
     private var preDimBrightness: Double = 0.75
     private var cancellables = Set<AnyCancellable>()
     
@@ -87,7 +84,6 @@ public final class KeyboardBacklightEngine: ObservableObject {
     }
     
     deinit {
-        breathingTimer?.invalidate()
         if let port = notifyPort {
             IONotificationPortDestroy(port)
         }
@@ -355,9 +351,6 @@ public final class KeyboardBacklightEngine: ObservableObject {
     
     public func togglePower() {
         stopAnimation()
-        if isBreathing {
-            stopBreathingEffect()
-        }
         if isIdleDimmed {
             isIdleDimmed = false
         }
@@ -375,9 +368,6 @@ public final class KeyboardBacklightEngine: ObservableObject {
     
     public func setBrightness(_ level: Double) {
         stopAnimation()
-        if isBreathing {
-            stopBreathingEffect()
-        }
         if isIdleDimmed {
             isIdleDimmed = false
         }
@@ -389,9 +379,6 @@ public final class KeyboardBacklightEngine: ObservableObject {
     
     public func applyPreset(_ preset: Double) {
         stopAnimation()
-        if isBreathing {
-            stopBreathingEffect()
-        }
         if isIdleDimmed {
             isIdleDimmed = false
         }
@@ -401,12 +388,52 @@ public final class KeyboardBacklightEngine: ObservableObject {
         setBrightness(preset)
     }
     
+    // MARK: - Native Keyboard Shortcut Stepping
+    
+    public func stepBrightnessUp(fine: Bool = false) {
+        guard !isSystemSleeping && !isScreenSleeping && !isLidClosed else { return }
+        stopAnimation()
+        if isIdleDimmed {
+            isIdleDimmed = false
+        }
+        if touchBarSyncStage != .active {
+            touchBarSyncStage = .active
+        }
+        
+        let step = fine ? (1.0 / 64.0) : (1.0 / 16.0)
+        let newLevel = min(brightness + step, 1.0)
+        setBrightness(newLevel)
+        
+        if LumosSettings.shared.showNativeOSDBezel {
+            OSDBezelController.shared.showBacklightBezel(brightness: newLevel)
+        }
+    }
+    
+    public func stepBrightnessDown(fine: Bool = false) {
+        guard !isSystemSleeping && !isScreenSleeping && !isLidClosed else { return }
+        stopAnimation()
+        if isIdleDimmed {
+            isIdleDimmed = false
+        }
+        if touchBarSyncStage != .active {
+            touchBarSyncStage = .active
+        }
+        
+        let step = fine ? (1.0 / 64.0) : (1.0 / 16.0)
+        let newLevel = max(brightness - step, 0.0)
+        setBrightness(newLevel)
+        
+        if LumosSettings.shared.showNativeOSDBezel {
+            OSDBezelController.shared.showBacklightBezel(brightness: newLevel)
+        }
+    }
+    
     // MARK: - Touch Bar Sync Support (Dimming & Sleep)
     
     public func enterTouchBarDim(targetLevel: Double = 0.15) {
         guard !isSystemSleeping && !isScreenSleeping && !isLidClosed else { return }
         guard LumosSettings.shared.syncBacklightWithTouchBar else { return }
-        guard isOn && !isBreathing && touchBarSyncStage == .active else { return }
+        guard isOn && touchBarSyncStage == .active else { return }
         stopAnimation()
         preDimBrightness = brightness
         touchBarSyncStage = .dimmed
@@ -417,7 +444,7 @@ public final class KeyboardBacklightEngine: ObservableObject {
     
     public func enterTouchBarSleep() {
         guard LumosSettings.shared.syncBacklightWithTouchBar else { return }
-        guard isOn && !isBreathing && touchBarSyncStage != .sleeping else { return }
+        guard isOn && touchBarSyncStage != .sleeping else { return }
         stopAnimation()
         if touchBarSyncStage == .active {
             preDimBrightness = brightness
@@ -450,7 +477,7 @@ public final class KeyboardBacklightEngine: ObservableObject {
     public func enterIdleDim(targetLevel: Double = 0.0) {
         guard !isSystemSleeping && !isScreenSleeping && !isLidClosed else { return }
         guard LumosSettings.shared.autoDimEnabled else { return }
-        guard isOn && !isIdleDimmed && !isBreathing && touchBarSyncStage == .active else { return }
+        guard isOn && !isIdleDimmed && touchBarSyncStage == .active else { return }
         stopAnimation()
         preDimBrightness = brightness
         isIdleDimmed = true
@@ -506,52 +533,5 @@ public final class KeyboardBacklightEngine: ObservableObject {
                 }
             }
         }
-    }
-    
-    // MARK: - Breathing Mode (Ambient Pulse)
-    
-    public func toggleBreathingEffect() {
-        if isBreathing {
-            stopBreathingEffect()
-        } else {
-            startBreathingEffect()
-        }
-    }
-    
-    public func startBreathingEffect() {
-        guard isHardwareAvailable else { return }
-        isBreathing = true
-        breathingAngle = 0.0
-        
-        breathingTimer?.invalidate()
-        breathingTimer = Timer.scheduledTimer(withTimeInterval: 0.04, repeats: true) { [weak self] _ in
-            Task { @MainActor [weak self] in
-                guard let self = self, self.isBreathing else { return }
-                self.breathingAngle += 0.06
-                if self.breathingAngle > .pi * 2 {
-                    self.breathingAngle -= .pi * 2
-                }
-                
-                // Sinusoidal wave between 0.05 and 0.90
-                let sinVal = (sin(self.breathingAngle) + 1.0) / 2.0
-                let waveLevel = 0.05 + (sinVal * 0.85)
-                
-                self.isApplyingInternalState = true
-                self.brightness = waveLevel
-                self.applyBrightnessToHardware(waveLevel)
-                self.isApplyingInternalState = false
-            }
-        }
-    }
-    
-    public func stopBreathingEffect() {
-        guard isBreathing else { return }
-        isBreathing = false
-        breathingTimer?.invalidate()
-        breathingTimer = nil
-        
-        // Restore last active brightness
-        let restore = LumosSettings.shared.lastActiveBrightness
-        setBrightness(restore)
     }
 }

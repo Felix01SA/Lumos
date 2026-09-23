@@ -97,12 +97,6 @@ public struct MenuBarPopupView: View {
             Divider()
                 .padding(.horizontal, -4)
             
-            // Inactivity & Breathing Controls
-            ActivityControlView(engine: engine, settings: settings, monitor: monitor)
-            
-            Divider()
-                .padding(.horizontal, -4)
-            
             // Bottom Action Bar
             HStack {
                 Button {

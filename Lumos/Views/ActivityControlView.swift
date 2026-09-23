@@ -98,46 +98,6 @@ public struct ActivityControlView: View {
                 }
                 .transition(.opacity.combined(with: .move(edge: .top)))
             }
-            
-            // Breathing Mode Card
-            HStack {
-                VStack(alignment: .leading, spacing: 2) {
-                    HStack(spacing: 5) {
-                        Image(systemName: "waveform")
-                            .foregroundStyle(engine.isBreathing ? Color.green : Color.secondary)
-                        Text("Efeito Respiração (Pulso)")
-                            .font(.subheadline)
-                            .fontWeight(.medium)
-                    }
-                    Text(engine.isBreathing ? "Oscilando brilho suavemente" : "Animação de luz contínua")
-                        .font(.caption2)
-                        .foregroundStyle(engine.isBreathing ? Color.green : Color.secondary)
-                }
-                
-                Spacer()
-                
-                Button {
-                    withAnimation(.spring) {
-                        engine.toggleBreathingEffect()
-                    }
-                } label: {
-                    Text(engine.isBreathing ? "Parar" : "Iniciar")
-                        .font(.caption.weight(.semibold))
-                        .padding(.horizontal, 10)
-                        .padding(.vertical, 4)
-                        .background(
-                            Capsule()
-                                .fill(engine.isBreathing ? Color.red.opacity(0.15) : Color.accentColor.opacity(0.15))
-                        )
-                        .foregroundStyle(engine.isBreathing ? Color.red : Color.accentColor)
-                }
-                .buttonStyle(.plain)
-            }
-            .padding(10)
-            .background(
-                RoundedRectangle(cornerRadius: 10, style: .continuous)
-                    .fill(Color(nsColor: .controlBackgroundColor).opacity(0.6))
-            )
         }
     }
     

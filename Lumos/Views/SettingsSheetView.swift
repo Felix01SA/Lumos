@@ -11,12 +11,16 @@ public struct SettingsView: View {
     @ObservedObject var settings: LumosSettings
     @ObservedObject var engine: KeyboardBacklightEngine
     @ObservedObject var touchBar: TouchBarController
+    @ObservedObject var monitor: IdleActivityMonitor
+    @ObservedObject var shortcuts: KeyboardShortcutManager
     
     @MainActor
     public init() {
         self.settings = .shared
         self.engine = .shared
         self.touchBar = .shared
+        self.monitor = .shared
+        self.shortcuts = .shared
     }
     
     @MainActor
@@ -24,6 +28,8 @@ public struct SettingsView: View {
         self.settings = settings
         self.engine = engine
         self.touchBar = .shared
+        self.monitor = .shared
+        self.shortcuts = .shared
     }
     
     @MainActor
@@ -31,55 +37,138 @@ public struct SettingsView: View {
         self.settings = settings
         self.engine = engine
         self.touchBar = touchBar
+        self.monitor = .shared
+        self.shortcuts = .shared
+    }
+    
+    @MainActor
+    public init(
+        settings: LumosSettings,
+        engine: KeyboardBacklightEngine,
+        touchBar: TouchBarController,
+        monitor: IdleActivityMonitor,
+        shortcuts: KeyboardShortcutManager
+    ) {
+        self.settings = settings
+        self.engine = engine
+        self.touchBar = touchBar
+        self.monitor = monitor
+        self.shortcuts = shortcuts
     }
     
     public var body: some View {
-        VStack(spacing: 18) {
-            // Header
-            HStack(spacing: 12) {
-                ZStack {
-                    RoundedRectangle(cornerRadius: 10, style: .continuous)
-                        .fill(
-                            LinearGradient(
-                                colors: [Color.orange.opacity(0.8), Color.yellow],
-                                startPoint: .topLeading,
-                                endPoint: .bottomTrailing
+        ScrollView(.vertical, showsIndicators: false) {
+            VStack(spacing: 18) {
+                // Header
+                HStack(spacing: 12) {
+                    ZStack {
+                        RoundedRectangle(cornerRadius: 10, style: .continuous)
+                            .fill(
+                                LinearGradient(
+                                    colors: [Color.orange.opacity(0.8), Color.yellow],
+                                    startPoint: .topLeading,
+                                    endPoint: .bottomTrailing
+                                )
                             )
-                        )
-                        .frame(width: 38, height: 38)
-                        .shadow(color: Color.orange.opacity(0.3), radius: 4)
+                            .frame(width: 38, height: 38)
+                            .shadow(color: Color.orange.opacity(0.3), radius: 4)
+                        
+                        Image(systemName: "keyboard")
+                            .font(.system(size: 18, weight: .bold))
+                            .foregroundStyle(Color.black.opacity(0.8))
+                    }
                     
-                    Image(systemName: "keyboard")
-                        .font(.system(size: 18, weight: .bold))
-                        .foregroundStyle(Color.black.opacity(0.8))
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Lumos")
+                            .font(.title3.weight(.bold))
+                        Text("Configurações do Teclado & Touch Bar")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+                    
+                    Spacer()
                 }
+                .padding(.bottom, 2)
                 
-                VStack(alignment: .leading, spacing: 2) {
-                    Text("Lumos")
-                        .font(.title3.weight(.bold))
-                    Text("Configurações do Teclado & Touch Bar")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
+                Divider()
+                
+                // Section: Interface & Menus
+                VStack(alignment: .leading, spacing: 10) {
+                    Label("Barra de Menus & Sistema", systemImage: "menubar.rectangle")
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(.primary)
+                    
+                    Toggle("Exibir porcentagem ao lado do ícone na Barra de Menus", isOn: $settings.showPercentageInMenuBar)
+                        .toggleStyle(.checkbox)
                 }
+                .frame(maxWidth: .infinity, alignment: .leading)
                 
-                Spacer()
-            }
-            .padding(.bottom, 2)
-            
-            Divider()
-            
-            // Section: Interface & Menus
-            VStack(alignment: .leading, spacing: 10) {
-                Label("Barra de Menus & Sistema", systemImage: "menubar.rectangle")
-                    .font(.subheadline.weight(.semibold))
-                    .foregroundStyle(.primary)
+                Divider()
                 
-                Toggle("Exibir porcentagem ao lado do ícone na Barra de Menus", isOn: $settings.showPercentageInMenuBar)
-                    .toggleStyle(.checkbox)
-            }
-            .frame(maxWidth: .infinity, alignment: .leading)
-            
-            Divider()
+                // Section: Inactivity Timer (ActivityControlView)
+                VStack(alignment: .leading, spacing: 10) {
+                    Label("Temporizador de Inatividade", systemImage: "timer")
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(.primary)
+                    
+                    ActivityControlView(engine: engine, settings: settings, monitor: monitor)
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                
+                Divider()
+                
+                // Section: Native Keyboard Shortcuts & OSD
+                VStack(alignment: .leading, spacing: 10) {
+                    HStack {
+                        Label("Atalhos de Teclado Nativos", systemImage: "command")
+                            .font(.subheadline.weight(.semibold))
+                            .foregroundStyle(.primary)
+                        Spacer()
+                        HStack(spacing: 5) {
+                            Circle()
+                                .fill(shortcuts.isAccessibilityTrusted ? Color.green : Color.orange)
+                                .frame(width: 7, height: 7)
+                            Text(shortcuts.isAccessibilityTrusted ? "Acessibilidade Ativa" : "Requer Permissão")
+                                .font(.caption2.weight(.medium))
+                                .foregroundStyle(shortcuts.isAccessibilityTrusted ? Color.green : Color.orange)
+                        }
+                        .padding(.horizontal, 7)
+                        .padding(.vertical, 3)
+                        .background(
+                            Capsule()
+                                .fill((shortcuts.isAccessibilityTrusted ? Color.green : Color.orange).opacity(0.12))
+                        )
+                    }
+                    
+                    Toggle("Capturar teclas nativas de brilho (F5 e F6 / Teclas de Mídia)", isOn: $settings.captureNativeShortcuts)
+                        .toggleStyle(.checkbox)
+                    
+                    Toggle("Exibir indicador visual nativo na tela (OSD Bezel da Apple)", isOn: $settings.showNativeOSDBezel)
+                        .toggleStyle(.checkbox)
+                    
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("• F5 / F6 ou Teclas de Mídia: diminui ou aumenta o brilho em passos de 1 bloco (1/16).")
+                        Text("• Option + Shift + F5 / F6: ajuste fino de 1/4 de bloco (1/64).")
+                        Text("• Control + Option + Seta Baixo / Cima: atalho universal alternativo.")
+                    }
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .padding(.top, 2)
+                    
+                    if !shortcuts.isAccessibilityTrusted {
+                        Button {
+                            shortcuts.openSystemSettingsAccessibility()
+                        } label: {
+                            Label("Permitir Acesso em Ajustes do Sistema > Privacidade & Segurança > Acessibilidade", systemImage: "lock.shield")
+                                .font(.caption)
+                        }
+                        .buttonStyle(.link)
+                        .padding(.top, 2)
+                    }
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                
+                Divider()
             
             // Section: Touch Bar
             VStack(alignment: .leading, spacing: 10) {
@@ -266,7 +355,8 @@ public struct SettingsView: View {
             }
         }
         .padding(20)
-        .frame(width: 440, height: 560)
+        }
+        .frame(width: 460, height: 640)
     }
 }
 

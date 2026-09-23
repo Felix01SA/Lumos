@@ -23,9 +23,6 @@ public struct MenuBarIconView: View {
     }
     
     private var iconName: String {
-        if engine.isBreathing {
-            return "waveform"
-        }
         if !engine.isOn || engine.brightness < 0.02 {
             return "keyboard"
         } else if engine.brightness < 0.5 {
