@@ -70,7 +70,7 @@ public class SquareTouchBarButton: NSButton {
     private func updateAppearance() {
         if isActive {
             layer?.backgroundColor = isHighlighted
-                ? NSColor.controlAccentColor.withAlphaComponent(0.8).cgColor
+                ? NSColor.controlAccentColor.cgColor
                 : NSColor.controlAccentColor.cgColor
         } else {
             layer?.backgroundColor = isHighlighted
@@ -97,6 +97,54 @@ public final class TouchBarController: NSObject, ObservableObject, NSTouchBarDel
     public static let preset75Id = NSTouchBarItem.Identifier("dev.felix01sa.lumos.preset.75")
     public static let preset100Id = NSTouchBarItem.Identifier("dev.felix01sa.lumos.preset.100")
     public static let breathingId = NSTouchBarItem.Identifier("dev.felix01sa.lumos.breathing")
+    
+    // Hardware Touch Bar availability & status
+    nonisolated public static let isTouchBarAvailable: Bool = {
+        guard let handle = dlopen("/System/Library/PrivateFrameworks/DFRFoundation.framework/DFRFoundation", RTLD_NOW) else {
+            return false
+        }
+        defer { dlclose(handle) }
+        guard let sym = dlsym(handle, "DFRGetScreenSize") else { return false }
+        let getSize = unsafeBitCast(sym, to: (@convention(c) () -> CGSize).self)
+        let size = getSize()
+        return size.width > 0
+    }()
+    
+    nonisolated public static func getTouchBarStatus() -> Int32 {
+        guard let handle = dlopen("/System/Library/PrivateFrameworks/DFRFoundation.framework/DFRFoundation", RTLD_NOW) else {
+            return -1
+        }
+        defer { dlclose(handle) }
+        guard let sym = dlsym(handle, "DFRGetStatus") else { return -1 }
+        let getStatus = unsafeBitCast(sym, to: (@convention(c) () -> Int32).self)
+        return getStatus()
+    }
+    
+    public enum TouchBarDisplayStage: String, CaseIterable {
+        case active = "Ativa"
+        case dimmed = "Esmaecida"
+        case sleeping = "Em repouso"
+    }
+    
+    @Published public private(set) var displayStage: TouchBarDisplayStage = .active
+    
+    public var isTouchBarAsleep: Bool {
+        displayStage == .sleeping
+    }
+    
+    public var isTouchBarDimmed: Bool {
+        displayStage == .dimmed
+    }
+    
+    public func updateTouchBarStage(_ stage: TouchBarDisplayStage) {
+        if displayStage != stage {
+            displayStage = stage
+        }
+    }
+    
+    public func updateTouchBarSleepState(asleep: Bool) {
+        updateTouchBarStage(asleep ? .sleeping : .active)
+    }
     
     public var systemTouchBar: NSTouchBar?
     private var controlStripItem: NSCustomTouchBarItem?
@@ -338,6 +386,8 @@ public final class TouchBarController: NSObject, ObservableObject, NSTouchBarDel
             action: #selector(controlStripButtonTapped),
             customWidth: 40.0
         )
+        
+        button.bezelColor = .controlBackgroundColor
         
         item.view = button
         self.controlStripItem = item

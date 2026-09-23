@@ -18,6 +18,10 @@ public final class LumosSettings: ObservableObject {
         static let showPercentageInMenuBar = "lumos.v2.showPercentageInMenuBar"
         static let lastActiveBrightness = "lumos.v2.lastActiveBrightness"
         static let showInTouchBarControlStrip = "lumos.v2.showInTouchBarControlStrip"
+        static let syncBacklightWithTouchBar = "lumos.v2.syncBacklightWithTouchBar"
+        static let touchBarDimLevel = "lumos.v2.touchBarDimLevel"
+        static let touchBarDimSeconds = "lumos.v2.touchBarDimSeconds"
+        static let touchBarSleepSeconds = "lumos.v2.touchBarSleepSeconds"
     }
     
     @Published public var autoDimEnabled: Bool {
@@ -44,6 +48,22 @@ public final class LumosSettings: ObservableObject {
         didSet { UserDefaults.standard.set(showInTouchBarControlStrip, forKey: Keys.showInTouchBarControlStrip) }
     }
     
+    @Published public var syncBacklightWithTouchBar: Bool {
+        didSet { UserDefaults.standard.set(syncBacklightWithTouchBar, forKey: Keys.syncBacklightWithTouchBar) }
+    }
+    
+    @Published public var touchBarDimLevel: Double {
+        didSet { UserDefaults.standard.set(touchBarDimLevel, forKey: Keys.touchBarDimLevel) }
+    }
+    
+    @Published public var touchBarDimSeconds: Double {
+        didSet { UserDefaults.standard.set(touchBarDimSeconds, forKey: Keys.touchBarDimSeconds) }
+    }
+    
+    @Published public var touchBarSleepSeconds: Double {
+        didSet { UserDefaults.standard.set(touchBarSleepSeconds, forKey: Keys.touchBarSleepSeconds) }
+    }
+    
     private init() {
         let defaults = UserDefaults.standard
         self.autoDimEnabled = defaults.object(forKey: Keys.autoDimEnabled) as? Bool ?? false
@@ -52,5 +72,11 @@ public final class LumosSettings: ObservableObject {
         self.showPercentageInMenuBar = defaults.object(forKey: Keys.showPercentageInMenuBar) as? Bool ?? false
         self.lastActiveBrightness = defaults.object(forKey: Keys.lastActiveBrightness) as? Double ?? 0.75
         self.showInTouchBarControlStrip = defaults.object(forKey: Keys.showInTouchBarControlStrip) as? Bool ?? true
+        
+        let defaultSync = TouchBarController.isTouchBarAvailable
+        self.syncBacklightWithTouchBar = defaults.object(forKey: Keys.syncBacklightWithTouchBar) as? Bool ?? defaultSync
+        self.touchBarDimLevel = defaults.object(forKey: Keys.touchBarDimLevel) as? Double ?? 0.15
+        self.touchBarDimSeconds = defaults.object(forKey: Keys.touchBarDimSeconds) as? Double ?? 60.0
+        self.touchBarSleepSeconds = defaults.object(forKey: Keys.touchBarSleepSeconds) as? Double ?? 75.0
     }
 }

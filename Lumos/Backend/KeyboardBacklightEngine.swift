@@ -32,6 +32,15 @@ public final class KeyboardBacklightEngine: ObservableObject {
     @Published public private(set) var isOn: Bool = false
     @Published public private(set) var isBreathing: Bool = false
     @Published public private(set) var isIdleDimmed: Bool = false
+    @Published public private(set) var touchBarSyncStage: TouchBarController.TouchBarDisplayStage = .active
+    
+    public var isTouchBarSleeping: Bool {
+        touchBarSyncStage == .sleeping
+    }
+    
+    public var isTouchBarDimmed: Bool {
+        touchBarSyncStage == .dimmed
+    }
     
     @Published public var brightness: Double = 0.75 {
         didSet {
@@ -233,6 +242,9 @@ public final class KeyboardBacklightEngine: ObservableObject {
         if isIdleDimmed {
             isIdleDimmed = false
         }
+        if touchBarSyncStage != .active {
+            touchBarSyncStage = .active
+        }
         brightness = min(max(level, 0.0), 1.0)
     }
     
@@ -243,21 +255,56 @@ public final class KeyboardBacklightEngine: ObservableObject {
         if isIdleDimmed {
             isIdleDimmed = false
         }
+        if touchBarSyncStage != .active {
+            touchBarSyncStage = .active
+        }
         setBrightness(preset)
     }
     
-    // MARK: - Idle Dimming Support
+    // MARK: - Touch Bar Sync Support (Dimming & Sleep)
+    
+    public func enterTouchBarDim(targetLevel: Double = 0.15) {
+        guard LumosSettings.shared.syncBacklightWithTouchBar else { return }
+        guard isOn && !isBreathing && touchBarSyncStage == .active else { return }
+        preDimBrightness = brightness
+        touchBarSyncStage = .dimmed
+        isIdleDimmed = true
+        let clampedTarget = min(targetLevel, max(preDimBrightness * 0.5, 0.05))
+        animateBrightness(from: brightness, to: clampedTarget, duration: 0.8)
+    }
+    
+    public func enterTouchBarSleep() {
+        guard LumosSettings.shared.syncBacklightWithTouchBar else { return }
+        guard isOn && !isBreathing && touchBarSyncStage != .sleeping else { return }
+        if touchBarSyncStage == .active {
+            preDimBrightness = brightness
+        }
+        touchBarSyncStage = .sleeping
+        isIdleDimmed = true
+        animateBrightness(from: brightness, to: 0.0, duration: 0.6)
+    }
+    
+    public func exitTouchBarSleep() {
+        wakeTouchBarBacklight()
+    }
+    
+    public func wakeTouchBarBacklight() {
+        guard touchBarSyncStage != .active else { return }
+        touchBarSyncStage = .active
+        isIdleDimmed = false
+        animateBrightness(from: brightness, to: preDimBrightness, duration: 0.3)
+    }
     
     public func enterIdleDim(targetLevel: Double = 0.0) {
         guard LumosSettings.shared.autoDimEnabled else { return }
-        guard isOn && !isIdleDimmed && !isBreathing else { return }
+        guard isOn && !isIdleDimmed && !isBreathing && touchBarSyncStage == .active else { return }
         preDimBrightness = brightness
         isIdleDimmed = true
         animateBrightness(from: brightness, to: targetLevel, duration: 0.6)
     }
     
     public func exitIdleDim() {
-        guard isIdleDimmed else { return }
+        guard isIdleDimmed && touchBarSyncStage == .active else { return }
         isIdleDimmed = false
         animateBrightness(from: brightness, to: preDimBrightness, duration: 0.3)
     }

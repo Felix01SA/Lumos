@@ -1,6 +1,8 @@
 # Compilação e binários gerados
 build/
 DerivedData/
+scratch/
+
 
 # Arquivos do sistema macOS
 .DS_Store

@@ -10,16 +10,27 @@ import SwiftUI
 public struct SettingsView: View {
     @ObservedObject var settings: LumosSettings
     @ObservedObject var engine: KeyboardBacklightEngine
+    @ObservedObject var touchBar: TouchBarController
     
     @MainActor
     public init() {
         self.settings = .shared
         self.engine = .shared
+        self.touchBar = .shared
     }
     
+    @MainActor
     public init(settings: LumosSettings, engine: KeyboardBacklightEngine) {
         self.settings = settings
         self.engine = engine
+        self.touchBar = .shared
+    }
+    
+    @MainActor
+    public init(settings: LumosSettings, engine: KeyboardBacklightEngine, touchBar: TouchBarController) {
+        self.settings = settings
+        self.engine = engine
+        self.touchBar = touchBar
     }
     
     public var body: some View {
@@ -72,16 +83,78 @@ public struct SettingsView: View {
             
             // Section: Touch Bar
             VStack(alignment: .leading, spacing: 10) {
-                Label("Touch Bar do MacBook Pro", systemImage: "rectangle.topthird.inset.filled")
-                    .font(.subheadline.weight(.semibold))
-                    .foregroundStyle(.primary)
+                HStack {
+                    Label("Touch Bar do MacBook Pro", systemImage: "rectangle.topthird.inset.filled")
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(.primary)
+                    Spacer()
+                    if TouchBarController.isTouchBarAvailable {
+                        let stage = touchBar.displayStage
+                        let stageColor: Color = {
+                            switch stage {
+                            case .active: return .green
+                            case .dimmed: return .yellow
+                            case .sleeping: return .orange
+                            }
+                        }()
+                        
+                        HStack(spacing: 5) {
+                            Circle()
+                                .fill(stageColor)
+                                .frame(width: 7, height: 7)
+                            Text(stage.rawValue)
+                                .font(.caption2.weight(.medium))
+                                .foregroundStyle(stageColor)
+                        }
+                        .padding(.horizontal, 7)
+                        .padding(.vertical, 3)
+                        .background(
+                            Capsule()
+                                .fill(stageColor.opacity(0.12))
+                        )
+                    } else {
+                        Text("Não detectada")
+                            .font(.caption2)
+                            .foregroundStyle(.secondary)
+                    }
+                }
                 
-                Toggle("Exibir atalho permanente no Control Strip", isOn: $settings.showInTouchBarControlStrip)
-                    .toggleStyle(.checkbox)
-                
-                Text("Permite tocar no ícone de teclado no canto direito da Touch Bar sobre qualquer aplicativo para controlar a iluminação.")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
+                if TouchBarController.isTouchBarAvailable {
+                    Toggle("Exibir atalho permanente no Control Strip", isOn: $settings.showInTouchBarControlStrip)
+                        .toggleStyle(.checkbox)
+                    
+                    Text("Permite tocar no ícone de teclado no canto direito da Touch Bar sobre qualquer aplicativo para controlar a iluminação.")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                    
+                    Toggle("Sincronizar iluminação com o ciclo da Touch Bar", isOn: $settings.syncBacklightWithTouchBar)
+                        .toggleStyle(.checkbox)
+                        .padding(.top, 4)
+                    
+                    Text("Diminui o teclado quando a Touch Bar esmaecer (~60s), apaga quando a Touch Bar desligar (~75s) e religa instantaneamente ao tocar no teclado, trackpad ou Touch Bar.")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                    
+                    if settings.syncBacklightWithTouchBar {
+                        HStack(spacing: 8) {
+                            Text("Brilho ao diminuir (dimming):")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                            Slider(value: $settings.touchBarDimLevel, in: 0.05...0.40, step: 0.05)
+                                .frame(width: 120)
+                            Text("\(Int(round(settings.touchBarDimLevel * 100)))%")
+                                .font(.caption.monospacedDigit().weight(.semibold))
+                                .foregroundStyle(.primary)
+                                .frame(width: 32, alignment: .trailing)
+                        }
+                        .padding(.leading, 18)
+                        .padding(.top, 2)
+                    }
+                } else {
+                    Text("Este dispositivo não possui Touch Bar física integrada.")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
             }
             .frame(maxWidth: .infinity, alignment: .leading)
             
@@ -146,7 +219,7 @@ public struct SettingsView: View {
             }
         }
         .padding(20)
-        .frame(width: 420, height: 430)
+        .frame(width: 440, height: 535)
     }
 }
 
