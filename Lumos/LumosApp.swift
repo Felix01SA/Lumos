@@ -15,12 +15,16 @@ struct LumosApp: App {
     @StateObject private var touchBarController = TouchBarController.shared
 
     var body: some Scene {
-//        WindowGroup("Lumos — Controle de Backlight") {
-//            ContentView(engine: engine, settings: settings, monitor: monitor)
-//                .frame(width: 320)
-//                .fixedSize()
-//        }
-//        .windowResizability(.contentSize)
+        WindowGroup("Lumos — Controle de Backlight") {
+            ContentView(engine: engine, settings: settings, monitor: monitor)
+                .frame(width: 320)
+                .fixedSize()
+        }
+        .windowResizability(.contentSize)
+
+        Settings {
+            SettingsView(settings: settings, engine: engine)
+        }
 
         MenuBarExtra {
             MenuBarPopupView(engine: engine, settings: settings, monitor: monitor)

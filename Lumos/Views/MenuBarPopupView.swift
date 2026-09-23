@@ -12,8 +12,6 @@ public struct MenuBarPopupView: View {
     @ObservedObject var settings: LumosSettings
     @ObservedObject var monitor: IdleActivityMonitor
     
-    @State private var showingSettings: Bool = false
-    
     @MainActor
     public init() {
         self.engine = .shared
@@ -108,9 +106,9 @@ public struct MenuBarPopupView: View {
             // Bottom Action Bar
             HStack {
                 Button {
-                    showingSettings = true
+                    SettingsWindowController.shared.showWindow()
                 } label: {
-                    Label("Ajustes", systemImage: "gearshape")
+                    Label("Ajustes...", systemImage: "gearshape")
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 }
@@ -131,9 +129,6 @@ public struct MenuBarPopupView: View {
         }
         .padding(14)
         .frame(width: 290)
-        .sheet(isPresented: $showingSettings) {
-            SettingsSheetView(settings: settings, engine: engine)
-        }
         .background(TouchBarView(engine: engine, settings: settings))
     }
 }
