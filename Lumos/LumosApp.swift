@@ -6,27 +6,27 @@
 //
 
 import SwiftUI
-import SwiftData
 
 @main
 struct LumosApp: App {
-    var sharedModelContainer: ModelContainer = {
-        let schema = Schema([
-            Item.self,
-        ])
-        let modelConfiguration = ModelConfiguration(schema: schema, isStoredInMemoryOnly: false)
-
-        do {
-            return try ModelContainer(for: schema, configurations: [modelConfiguration])
-        } catch {
-            fatalError("Could not create ModelContainer: \(error)")
-        }
-    }()
+    @StateObject private var engine = KeyboardBacklightEngine.shared
+    @StateObject private var settings = LumosSettings.shared
+    @StateObject private var monitor = IdleActivityMonitor.shared
+    @StateObject private var touchBarController = TouchBarController.shared
 
     var body: some Scene {
-        WindowGroup {
-            ContentView()
+//        WindowGroup("Lumos — Controle de Backlight") {
+//            ContentView(engine: engine, settings: settings, monitor: monitor)
+//                .frame(width: 320)
+//                .fixedSize()
+//        }
+//        .windowResizability(.contentSize)
+
+        MenuBarExtra {
+            MenuBarPopupView(engine: engine, settings: settings, monitor: monitor)
+        } label: {
+            MenuBarIconView(engine: engine, settings: settings)
         }
-        .modelContainer(sharedModelContainer)
+        .menuBarExtraStyle(.window)
     }
 }
