@@ -62,6 +62,8 @@ SWIFT_SOURCES=(
     "$PROJECT_DIR/Lumos/Backend/KeyboardBacklightEngine.swift"
     "$PROJECT_DIR/Lumos/Backend/IdleActivityMonitor.swift"
     "$PROJECT_DIR/Lumos/Backend/TouchBarController.swift"
+    "$PROJECT_DIR/Lumos/Backend/OSDBezelController.swift"
+    "$PROJECT_DIR/Lumos/Backend/KeyboardShortcutManager.swift"
     "$PROJECT_DIR/Lumos/Backend/SettingsWindowController.swift"
     "$PROJECT_DIR/Lumos/Views/BrightnessSliderView.swift"
     "$PROJECT_DIR/Lumos/Views/PresetsView.swift"

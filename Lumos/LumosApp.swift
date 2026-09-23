@@ -13,6 +13,7 @@ struct LumosApp: App {
     @StateObject private var settings = LumosSettings.shared
     @StateObject private var monitor = IdleActivityMonitor.shared
     @StateObject private var touchBarController = TouchBarController.shared
+    @StateObject private var shortcutManager = KeyboardShortcutManager.shared
 
     var body: some Scene {
         WindowGroup("Lumos — Controle de Backlight") {

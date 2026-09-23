@@ -23,6 +23,16 @@ public final class LumosSettings: ObservableObject {
         static let touchBarDimSeconds = "lumos.v2.touchBarDimSeconds"
         static let touchBarSleepSeconds = "lumos.v2.touchBarSleepSeconds"
         static let sleepWithDisplayAndClamshell = "lumos.v2.sleepWithDisplayAndClamshell"
+        static let captureNativeShortcuts = "lumos.v2.captureNativeShortcuts"
+        static let showNativeOSDBezel = "lumos.v2.showNativeOSDBezel"
+    }
+    
+    @Published public var captureNativeShortcuts: Bool {
+        didSet { UserDefaults.standard.set(captureNativeShortcuts, forKey: Keys.captureNativeShortcuts) }
+    }
+    
+    @Published public var showNativeOSDBezel: Bool {
+        didSet { UserDefaults.standard.set(showNativeOSDBezel, forKey: Keys.showNativeOSDBezel) }
     }
     
     @Published public var autoDimEnabled: Bool {
@@ -84,5 +94,7 @@ public final class LumosSettings: ObservableObject {
         self.touchBarDimSeconds = defaults.object(forKey: Keys.touchBarDimSeconds) as? Double ?? 60.0
         self.touchBarSleepSeconds = defaults.object(forKey: Keys.touchBarSleepSeconds) as? Double ?? 75.0
         self.sleepWithDisplayAndClamshell = defaults.object(forKey: Keys.sleepWithDisplayAndClamshell) as? Bool ?? true
+        self.captureNativeShortcuts = defaults.object(forKey: Keys.captureNativeShortcuts) as? Bool ?? true
+        self.showNativeOSDBezel = defaults.object(forKey: Keys.showNativeOSDBezel) as? Bool ?? true
     }
 }
