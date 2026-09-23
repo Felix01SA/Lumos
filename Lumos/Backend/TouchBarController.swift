@@ -210,7 +210,7 @@ public final class TouchBarController: NSObject, ObservableObject, NSTouchBarDel
             stack.spacing = 6
             stack.alignment = .centerY
             
-            if let minImg = NSImage(systemSymbolName: "sun.min.fill", accessibilityDescription: "Mínimo") {
+            if let minImg = NSImage(systemSymbolName: "light.min", accessibilityDescription: "Mínimo") {
                 let iv = NSImageView(image: minImg)
                 iv.contentTintColor = .secondaryLabelColor
                 stack.addArrangedSubview(iv)
@@ -224,7 +224,7 @@ public final class TouchBarController: NSObject, ObservableObject, NSTouchBarDel
             sliders.append(sl)
             stack.addArrangedSubview(sl)
             
-            if let maxImg = NSImage(systemSymbolName: "sun.max.fill", accessibilityDescription: "Máximo") {
+            if let maxImg = NSImage(systemSymbolName: "light.max", accessibilityDescription: "Máximo") {
                 let iv = NSImageView(image: maxImg)
                 iv.contentTintColor = .secondaryLabelColor
                 stack.addArrangedSubview(iv)
