@@ -10,6 +10,7 @@
 ![Swift](https://img.shields.io/badge/Swift-5.9%2B-orange?logo=swift)
 ![Architecture](https://img.shields.io/badge/Architecture-Apple%20Silicon%20%7C%20Intel-success)
 ![Interface](https://img.shields.io/badge/UI-SwiftUI%20%2B%20AppKit-purple)
+![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)
 
 </div>
 
@@ -114,4 +115,4 @@ O Lumos se comunica com o hardware do teclado sem hacks ou dependências externa
 
 ## 📄 Licença
 
-Distribuído sob a licença MIT. Consulte o arquivo de licença para mais informações.
+Distribuído sob a licença MIT. Consulte o arquivo [LICENSE](LICENSE) para mais informações.
