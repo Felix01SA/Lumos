@@ -11,6 +11,7 @@
 ![Architecture](https://img.shields.io/badge/Architecture-Apple%20Silicon%20%7C%20Intel-success)
 ![Interface](https://img.shields.io/badge/UI-SwiftUI%20%2B%20AppKit-purple)
 ![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)
+[![Release](https://img.shields.io/github/v/release/Felix01SA/Lumos?color=success&label=release&logo=github)](https://github.com/Felix01SA/Lumos/releases/latest)
 
 </div>
 
@@ -60,20 +61,25 @@
 
 ---
 
-## 🚀 Como Executar
+## 🚀 Como Instalar e Executar
 
-### Opção 1: Via Imagem de Disco (DMG)
-1. Gere ou baixe o arquivo `Lumos.dmg`.
-2. Dê um clique duplo para abrir a imagem de disco.
-3. Arraste o ícone do **Lumos** para a pasta **Aplicativos** (`Applications`).
-4. Abra o Lumos pelo Spotlight ou pelo Launchpad.
+### 📦 1. Pelo Instalador Oficial (Recomendado)
+1. Acesse a página de **[Lançamentos (Releases)](https://github.com/Felix01SA/Lumos/releases/latest)** e baixe o instalador **`Lumos.dmg`** mais recente.
+2. Dê um duplo clique no arquivo `.dmg` baixado para abrir a imagem de disco.
+3. Arraste o ícone do **Lumos** para o atalho da pasta **Aplicativos** (`Applications`).
+4. Abra o Lumos pelo **Spotlight** (`Cmd + Barra de Espaço`), pelo **Finder** ou pelo **Launchpad**.
 
-### Opção 2: Pelo Terminal
+> **💡 Dica de Acessibilidade:** Para habilitar os atalhos físicos do teclado (`F5` e `F6`), conceda a permissão de **Acessibilidade** nas *Ajustes do Sistema > Privacidade e Segurança > Acessibilidade* quando solicitado.
+
+---
+
+### 💻 2. Pelo Terminal (Desenvolvedores)
+Se você clonou o código-fonte, pode compilar e abrir diretamente pelo terminal:
 ```bash
-./build/Lumos.app/Contents/MacOS/Lumos &
+# Compilar e abrir o aplicativo
+./scripts/build_app.sh
+open ./build/Lumos.app
 ```
-
-> **Nota:** Para que os atalhos de teclado físicos (`F5`/`F6`) funcionem, conceda a permissão de **Acessibilidade** nas *Ajustes do Sistema > Privacidade e Segurança > Acessibilidade* quando solicitado.
 
 ---
 
