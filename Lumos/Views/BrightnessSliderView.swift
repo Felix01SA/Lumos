@@ -63,3 +63,8 @@ public struct BrightnessSliderView: View {
         }
     }
 }
+
+
+#Preview {
+    BrightnessSliderView()
+}

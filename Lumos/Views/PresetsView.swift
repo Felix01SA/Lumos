@@ -70,3 +70,7 @@ public struct PresetsView: View {
         return abs(engine.brightness - value) < 0.08
     }
 }
+
+#Preview {
+    PresetsView()
+}

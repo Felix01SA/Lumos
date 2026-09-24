@@ -48,9 +48,10 @@ public struct MenuBarPopupView: View {
                             .frame(width: 28, height: 28)
                             .shadow(color: engine.isOn ? Color.orange.opacity(0.4) : .clear, radius: 4)
                         
-                        Image(systemName: "keyboard")
-                            .font(.system(size: 13, weight: .bold))
-                            .foregroundStyle(engine.isOn ? Color.black.opacity(0.8) : Color.secondary)
+                        Image("icon").resizable()
+                            .frame(width: 40, height: 40)
+//                            .font(.system(size: 13, weight: .bold))
+//                            .foregroundStyle(engine.isOn ? Color.black.opacity(0.8) : Color.secondary)
                     }
                     
                     VStack(alignment: .leading, spacing: 1) {
@@ -125,4 +126,9 @@ public struct MenuBarPopupView: View {
         .frame(width: 290)
         .background(TouchBarView(engine: engine, settings: settings))
     }
+}
+
+
+#Preview {
+    MenuBarPopupView()
 }

@@ -71,11 +71,11 @@ public struct SettingsView: View {
                                 )
                             )
                             .frame(width: 38, height: 38)
-                            .shadow(color: Color.orange.opacity(0.3), radius: 4)
+                            .shadow(color:engine.isOn ? Color.orange.opacity(0.4) : .clear, radius: 4)
                         
-                        Image(systemName: "keyboard")
-                            .font(.system(size: 18, weight: .bold))
-                            .foregroundStyle(Color.black.opacity(0.8))
+                        Image("icon").resizable().frame(width: 50, height: 50)
+//                            .font(.system(size: 18, weight: .bold))
+//                            .foregroundStyle(Color.black.opacity(0.8))
                     }
                     
                     VStack(alignment: .leading, spacing: 2) {
@@ -361,3 +361,8 @@ public struct SettingsView: View {
 }
 
 public typealias SettingsSheetView = SettingsView
+
+
+#Preview {
+    SettingsView()
+}

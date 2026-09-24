@@ -109,3 +109,8 @@ public struct ActivityControlView: View {
         }
     }
 }
+
+
+#Preview {
+    ActivityControlView()
+}

@@ -56,3 +56,8 @@ class TouchBarAccessorNSView: NSView {
         return TouchBarController.shared.makeTouchBar()
     }
 }
+
+#Preview {
+    TouchBarView()
+}
+

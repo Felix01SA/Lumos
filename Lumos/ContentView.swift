@@ -35,3 +35,7 @@ struct ContentView: View {
             .background(TouchBarView(engine: engine, settings: settings))
     }
 }
+
+#Preview {
+    ContentView()
+}

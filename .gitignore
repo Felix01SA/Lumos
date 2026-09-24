@@ -14,3 +14,7 @@ scratch/
 xcuserdata/
 *.xcworkspace/xcuserdata/
 *.xcuserdatad/
+
+# Icones
+Lumos.icon
+Lumos*.icns

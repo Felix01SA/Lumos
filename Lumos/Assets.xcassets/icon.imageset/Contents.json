@@ -1,0 +1,21 @@
+{
+  "images" : [
+    {
+      "filename" : "Fundo de Gemini_Generated_Image_8fl0t78fl0t78fl0 Removido.png",
+      "idiom" : "universal",
+      "scale" : "1x"
+    },
+    {
+      "idiom" : "universal",
+      "scale" : "2x"
+    },
+    {
+      "idiom" : "universal",
+      "scale" : "3x"
+    }
+  ],
+  "info" : {
+    "author" : "xcode",
+    "version" : 1
+  }
+}

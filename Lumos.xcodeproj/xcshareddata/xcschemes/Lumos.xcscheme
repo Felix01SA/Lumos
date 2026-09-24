@@ -1,0 +1,96 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Scheme
+   LastUpgradeVersion = "2600"
+   version = "1.7">
+   <BuildAction
+      parallelizeBuildables = "YES"
+      buildImplicitDependencies = "YES"
+      buildArchitectures = "Automatic">
+      <BuildActionEntries>
+         <BuildActionEntry
+            buildForTesting = "YES"
+            buildForRunning = "YES"
+            buildForProfiling = "YES"
+            buildForArchiving = "YES"
+            buildForAnalyzing = "YES">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "DC063FDC3063EE52001F5BF8"
+               BuildableName = "Lumos.app"
+               BlueprintName = "Lumos"
+               ReferencedContainer = "container:Lumos.xcodeproj">
+            </BuildableReference>
+         </BuildActionEntry>
+      </BuildActionEntries>
+   </BuildAction>
+   <TestAction
+      buildConfiguration = "Debug"
+      selectedDebuggerIdentifier = "Xcode.DebuggerFoundation.Debugger.LLDB"
+      selectedLauncherIdentifier = "Xcode.DebuggerFoundation.Launcher.LLDB"
+      shouldUseLaunchSchemeArgsEnv = "YES"
+      shouldAutocreateTestPlan = "YES">
+   </TestAction>
+   <LaunchAction
+      buildConfiguration = "Debug"
+      selectedDebuggerIdentifier = "Xcode.DebuggerFoundation.Debugger.LLDB"
+      selectedLauncherIdentifier = "Xcode.DebuggerFoundation.Launcher.LLDB"
+      launchStyle = "0"
+      useCustomWorkingDirectory = "NO"
+      ignoresPersistentStateOnLaunch = "NO"
+      debugDocumentVersioning = "YES"
+      debugServiceExtension = "internal"
+      allowLocationSimulation = "YES">
+      <BuildableProductRunnable
+         runnableDebuggingMode = "0">
+         <BuildableReference
+            BuildableIdentifier = "primary"
+            BlueprintIdentifier = "DC063FDC3063EE52001F5BF8"
+            BuildableName = "Lumos.app"
+            BlueprintName = "Lumos"
+            ReferencedContainer = "container:Lumos.xcodeproj">
+         </BuildableReference>
+      </BuildableProductRunnable>
+   </LaunchAction>
+   <ProfileAction
+      buildConfiguration = "Release"
+      shouldUseLaunchSchemeArgsEnv = "YES"
+      savedToolIdentifier = ""
+      useCustomWorkingDirectory = "NO"
+      debugDocumentVersioning = "YES">
+      <BuildableProductRunnable
+         runnableDebuggingMode = "0">
+         <BuildableReference
+            BuildableIdentifier = "primary"
+            BlueprintIdentifier = "DC063FDC3063EE52001F5BF8"
+            BuildableName = "Lumos.app"
+            BlueprintName = "Lumos"
+            ReferencedContainer = "container:Lumos.xcodeproj">
+         </BuildableReference>
+      </BuildableProductRunnable>
+   </ProfileAction>
+   <AnalyzeAction
+      buildConfiguration = "Debug">
+   </AnalyzeAction>
+   <ArchiveAction
+      buildConfiguration = "Release"
+      revealArchiveInOrganizer = "YES">
+      <PostActions>
+         <ExecutionAction
+            ActionType = "Xcode.IDEStandardExecutionActionsCore.ExecutionActionType.ShellScriptAction">
+            <ActionContent
+               title = "Run Script"
+               scriptText = "# Type a script or drag a script file from your workspace to insert its path.&#10;# Define o caminho do .app gerado pelo Archive&#10;APP_PATH=&quot;${ARCHIVE_PRODUCTS_PATH}${INSTALL_PATH}/${FULL_PRODUCT_NAME}&quot;&#10;DMG_NAME=&quot;Lumos.dmg&quot;&#10;OUTPUT_DIR=&quot;${HOME}/Desktop&quot;&#10;STAGING_DIR=&quot;${PROJECT_TEMP_DIR}/dmg_staging&quot;&#10;&#10;# Prepara a pasta tempor&#xe1;ria&#10;rm -rf &quot;$STAGING_DIR&quot;&#10;mkdir -p &quot;$STAGING_DIR&quot;&#10;&#10;# Copia o aplicativo compilado&#10;cp -R &quot;$APP_PATH&quot; &quot;$STAGING_DIR/&quot;&#10;&#10;# Cria o atalho nativo para a pasta Aplicativos (arraste e solte)&#10;ln -s /Applications &quot;$STAGING_DIR/Applications&quot;&#10;&#10;# Remove DMG antigo na Mesa se existir&#10;rm -f &quot;${OUTPUT_DIR}/${DMG_NAME}&quot;&#10;&#10;# Cria a imagem de disco compactada (.dmg)&#10;hdiutil create \&#10;    -volname &quot;Lumos&quot; \&#10;    -srcfolder &quot;$STAGING_DIR&quot; \&#10;    -ov \&#10;    -format UDZO \&#10;    &quot;${OUTPUT_DIR}/${DMG_NAME}&quot;&#10;&#10;# Limpa tempor&#xe1;rios&#10;rm -rf &quot;$STAGING_DIR&quot;&#10;">
+               <EnvironmentBuildable>
+                  <BuildableReference
+                     BuildableIdentifier = "primary"
+                     BlueprintIdentifier = "DC063FDC3063EE52001F5BF8"
+                     BuildableName = "Lumos.app"
+                     BlueprintName = "Lumos"
+                     ReferencedContainer = "container:Lumos.xcodeproj">
+                  </BuildableReference>
+               </EnvironmentBuildable>
+            </ActionContent>
+         </ExecutionAction>
+      </PostActions>
+   </ArchiveAction>
+</Scheme>

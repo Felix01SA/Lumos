@@ -44,3 +44,7 @@ public struct MenuBarIconView: View {
         }
     }
 }
+
+#Preview {
+    MenuBarIconView()
+}
