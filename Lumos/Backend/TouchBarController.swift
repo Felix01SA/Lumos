@@ -120,9 +120,9 @@ public final class TouchBarController: NSObject, ObservableObject, NSTouchBarDel
     }
     
     public enum TouchBarDisplayStage: String, CaseIterable {
-        case active = "Ativa"
-        case dimmed = "Esmaecida"
-        case sleeping = "Em repouso"
+        case active = "touchbar_stage_active"
+        case dimmed = "touchbar_stage_dimmed"
+        case sleeping = "touchbar_stage_sleeping"
     }
     
     @Published public private(set) var displayStage: TouchBarDisplayStage = .active

@@ -57,7 +57,9 @@ class TouchBarAccessorNSView: NSView {
     }
 }
 
+#if DEBUG
 #Preview {
     TouchBarView()
 }
+#endif
 

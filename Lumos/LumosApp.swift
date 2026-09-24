@@ -16,21 +16,27 @@ struct LumosApp: App {
     @StateObject private var shortcutManager = KeyboardShortcutManager.shared
 
     var body: some Scene {
-        WindowGroup("Lumos — Controle de Backlight") {
+        let currentLocale = settings.appLanguage.effectiveLocale
+
+        WindowGroup("window_title_main") {
             ContentView(engine: engine, settings: settings, monitor: monitor)
                 .frame(width: 320)
                 .fixedSize()
+                .environment(\.locale, currentLocale)
         }
         .windowResizability(.contentSize)
 
         Settings {
             SettingsView(settings: settings, engine: engine)
+                .environment(\.locale, currentLocale)
         }
 
         MenuBarExtra {
             MenuBarPopupView(engine: engine, settings: settings, monitor: monitor)
+                .environment(\.locale, currentLocale)
         } label: {
             MenuBarIconView(engine: engine, settings: settings)
+                .environment(\.locale, currentLocale)
         }
         .menuBarExtraStyle(.window)
     }

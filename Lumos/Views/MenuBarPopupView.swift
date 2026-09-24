@@ -55,9 +55,9 @@ public struct MenuBarPopupView: View {
                     }
                     
                     VStack(alignment: .leading, spacing: 1) {
-                        Text("Lumos")
+                        Text("app_name")
                             .font(.system(size: 14, weight: .bold, design: .rounded))
-                        Text(engine.isOn ? "Teclado Iluminado" : "Backlight Desligado")
+                        Text(engine.isOn ? "status_backlight_on" : "status_backlight_off")
                             .font(.system(size: 10))
                             .foregroundStyle(.secondary)
                     }
@@ -83,7 +83,7 @@ public struct MenuBarPopupView: View {
                     }
                 }
                 .buttonStyle(.plain)
-                .help(engine.isOn ? "Desligar Iluminação" : "Ligar Iluminação")
+                .help(LocalizedStringKey(engine.isOn ? "action_turn_off" : "action_turn_on"))
             }
             
             Divider()
@@ -103,7 +103,7 @@ public struct MenuBarPopupView: View {
                 Button {
                     SettingsWindowController.shared.showWindow()
                 } label: {
-                    Label("Ajustes...", systemImage: "gearshape")
+                    Label("action_settings", systemImage: "gearshape")
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 }
@@ -114,7 +114,7 @@ public struct MenuBarPopupView: View {
                 Button {
                     NSApplication.shared.terminate(nil)
                 } label: {
-                    Text("Encerrar")
+                    Text("action_quit")
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 }
@@ -129,6 +129,8 @@ public struct MenuBarPopupView: View {
 }
 
 
+#if DEBUG
 #Preview {
     MenuBarPopupView()
 }
+#endif

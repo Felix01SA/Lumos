@@ -26,7 +26,7 @@ public struct BrightnessSliderView: View {
     public var body: some View {
         VStack(spacing: 8) {
             HStack {
-                Label("Iluminação", systemImage: "light.max")
+                Label("brightness_label", systemImage: "light.max")
                     .font(.subheadline.weight(.semibold))
                     .foregroundStyle(.secondary)
                 
@@ -65,6 +65,8 @@ public struct BrightnessSliderView: View {
 }
 
 
+#if DEBUG
 #Preview {
     BrightnessSliderView()
 }
+#endif

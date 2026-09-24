@@ -45,15 +45,21 @@ public struct ActivityControlView: View {
                     HStack(spacing: 5) {
                         Image(systemName: "timer")
                             .foregroundStyle(settings.autoDimEnabled ? Color.accentColor : Color.secondary)
-                        Text("Auto-apagar por Inatividade")
+                        Text("idle_auto_dim_toggle")
                             .font(.subheadline)
                             .fontWeight(.medium)
                     }
                     
                     if settings.autoDimEnabled {
-                        Text(engine.isIdleDimmed ? "Teclado apagado por inatividade" : "Apaga se inativo por \(formatSeconds(settings.autoDimSeconds))")
-                            .font(.caption2)
-                            .foregroundStyle(engine.isIdleDimmed ? Color.orange : Color.secondary)
+                        Group {
+                            if engine.isIdleDimmed {
+                                Text("idle_status_dimmed")
+                            } else {
+                                Text(String(format: NSLocalizedString("idle_status_timeout_format", comment: ""), formatSeconds(settings.autoDimSeconds)))
+                            }
+                        }
+                        .font(.caption2)
+                        .foregroundStyle(engine.isIdleDimmed ? Color.orange : Color.secondary)
                     }
                 }
                 
@@ -111,6 +117,8 @@ public struct ActivityControlView: View {
 }
 
 
+#if DEBUG
 #Preview {
     ActivityControlView()
 }
+#endif

@@ -23,6 +23,11 @@ cat << 'EOF' > "$APP_DIR/Contents/Info.plist"
 <dict>
     <key>CFBundleDevelopmentRegion</key>
     <string>pt_BR</string>
+    <key>CFBundleLocalizations</key>
+    <array>
+        <string>pt-BR</string>
+        <string>en</string>
+    </array>
     <key>CFBundleExecutable</key>
     <string>Lumos</string>
     <key>CFBundleIdentifier</key>
@@ -54,6 +59,34 @@ cat << 'EOF' > "$APP_DIR/Contents/Info.plist"
 EOF
 
 echo "APPL????" > "$APP_DIR/Contents/PkgInfo"
+
+# Export String Catalog (.xcstrings) to .lproj bundles
+if [ -f "$PROJECT_DIR/Lumos/Localizable.xcstrings" ]; then
+    echo "==> Exporting Localizable.xcstrings to .lproj bundles..."
+    python3 -c "
+import json, os
+
+xcstrings_path = '$PROJECT_DIR/Lumos/Localizable.xcstrings'
+with open(xcstrings_path, 'r', encoding='utf-8') as f:
+    catalog = json.load(f)
+
+strings = catalog.get('strings', {})
+for lang in ['pt-BR', 'en']:
+    lproj_dir = os.path.join('$APP_DIR', 'Contents', 'Resources', f'{lang}.lproj')
+    os.makedirs(lproj_dir, exist_ok=True)
+    out_file = os.path.join(lproj_dir, 'Localizable.strings')
+    with open(out_file, 'w', encoding='utf-8') as out:
+        for key, val in strings.items():
+            locs = val.get('localizations', {})
+            if lang in locs:
+                translated = locs[lang].get('stringUnit', {}).get('value', key)
+            else:
+                translated = key
+            k_esc = key.replace('\\\\', '\\\\\\\\').replace('\"', '\\\\\"')
+            v_esc = translated.replace('\\\\', '\\\\\\\\').replace('\"', '\\\\\"')
+            out.write(f'\"{k_esc}\" = \"{v_esc}\";\n')
+"
+fi
 
 SWIFT_SOURCES=(
     "$PROJECT_DIR/Lumos/LumosApp.swift"

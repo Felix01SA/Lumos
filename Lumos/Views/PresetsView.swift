@@ -29,7 +29,7 @@ public struct PresetsView: View {
     
     public var body: some View {
         VStack(alignment: .leading, spacing: 6) {
-            Text("Presets Rápidos")
+            Text("presets_title")
                 .font(.caption)
                 .foregroundStyle(.secondary)
                 .fontWeight(.medium)
@@ -71,6 +71,8 @@ public struct PresetsView: View {
     }
 }
 
+#if DEBUG
 #Preview {
     PresetsView()
 }
+#endif

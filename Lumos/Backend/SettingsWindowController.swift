@@ -21,7 +21,7 @@ public final class SettingsWindowController: NSObject, NSWindowDelegate {
             return
         }
         
-        let settingsView = SettingsView()
+        let settingsView = LocalizedSettingsHostView()
         let hostingView = NSHostingView(rootView: settingsView)
         
         let win = NSWindow(
@@ -30,7 +30,7 @@ public final class SettingsWindowController: NSObject, NSWindowDelegate {
             backing: .buffered,
             defer: false
         )
-        win.title = "Ajustes do Lumos"
+        win.title = NSLocalizedString("window_title_settings", comment: "")
         win.titleVisibility = .visible
         win.titlebarAppearsTransparent = false
         win.contentView = hostingView
@@ -42,6 +42,15 @@ public final class SettingsWindowController: NSObject, NSWindowDelegate {
         
         win.makeKeyAndOrderFront(nil)
         NSApp.activate(ignoringOtherApps: true)
+    }
+}
+
+private struct LocalizedSettingsHostView: View {
+    @ObservedObject var settings = LumosSettings.shared
+    
+    var body: some View {
+        SettingsView()
+            .environment(\.locale, settings.appLanguage.effectiveLocale)
     }
     
     public func windowWillClose(_ notification: Notification) {

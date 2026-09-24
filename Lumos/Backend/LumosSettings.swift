@@ -8,10 +8,38 @@
 import SwiftUI
 import Combine
 
+public enum AppLanguage: String, CaseIterable, Identifiable {
+    case system = "system"
+    case ptBR = "pt-BR"
+    case en = "en"
+    
+    public var id: String { rawValue }
+    
+    public var displayName: LocalizedStringKey {
+        switch self {
+        case .system: return "language_system"
+        case .ptBR: return "language_pt_br"
+        case .en: return "language_en"
+        }
+    }
+    
+    public var effectiveLocale: Locale {
+        switch self {
+        case .system:
+            return Locale.autoupdatingCurrent
+        case .ptBR:
+            return Locale(identifier: "pt-BR")
+        case .en:
+            return Locale(identifier: "en")
+        }
+    }
+}
+
 public final class LumosSettings: ObservableObject {
     public static let shared = LumosSettings()
     
     private enum Keys {
+        static let appLanguage = "lumos.v2.appLanguage"
         static let autoDimEnabled = "lumos.v2.autoDimEnabled"
         static let autoDimSeconds = "lumos.v2.autoDimSeconds"
         static let dimLevel = "lumos.v2.dimLevel"
@@ -25,6 +53,10 @@ public final class LumosSettings: ObservableObject {
         static let sleepWithDisplayAndClamshell = "lumos.v2.sleepWithDisplayAndClamshell"
         static let captureNativeShortcuts = "lumos.v2.captureNativeShortcuts"
         static let showNativeOSDBezel = "lumos.v2.showNativeOSDBezel"
+    }
+    
+    @Published public var appLanguage: AppLanguage {
+        didSet { UserDefaults.standard.set(appLanguage.rawValue, forKey: Keys.appLanguage) }
     }
     
     @Published public var captureNativeShortcuts: Bool {
@@ -81,6 +113,12 @@ public final class LumosSettings: ObservableObject {
     
     private init() {
         let defaults = UserDefaults.standard
+        if let rawLang = defaults.string(forKey: Keys.appLanguage),
+           let lang = AppLanguage(rawValue: rawLang) {
+            self.appLanguage = lang
+        } else {
+            self.appLanguage = .system
+        }
         self.autoDimEnabled = defaults.object(forKey: Keys.autoDimEnabled) as? Bool ?? false
         self.autoDimSeconds = defaults.object(forKey: Keys.autoDimSeconds) as? Double ?? 120.0
         self.dimLevel = defaults.object(forKey: Keys.dimLevel) as? Double ?? 0.0

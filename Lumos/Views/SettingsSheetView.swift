@@ -79,9 +79,9 @@ public struct SettingsView: View {
                     }
                     
                     VStack(alignment: .leading, spacing: 2) {
-                        Text("Lumos")
+                        Text("app_name")
                             .font(.title3.weight(.bold))
-                        Text("Configurações do Teclado & Touch Bar")
+                        Text("app_subtitle_settings")
                             .font(.caption)
                             .foregroundStyle(.secondary)
                     }
@@ -94,12 +94,28 @@ public struct SettingsView: View {
                 
                 // Section: Interface & Menus
                 VStack(alignment: .leading, spacing: 10) {
-                    Label("Barra de Menus & Sistema", systemImage: "menubar.rectangle")
+                    Label("settings_section_menubar", systemImage: "menubar.rectangle")
                         .font(.subheadline.weight(.semibold))
                         .foregroundStyle(.primary)
                     
-                    Toggle("Exibir porcentagem ao lado do ícone na Barra de Menus", isOn: $settings.showPercentageInMenuBar)
+                    Toggle("settings_show_percentage", isOn: $settings.showPercentageInMenuBar)
                         .toggleStyle(.checkbox)
+                    
+                    HStack(spacing: 8) {
+                        Text("settings_language_label")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                        
+                        Picker("", selection: $settings.appLanguage) {
+                            ForEach(AppLanguage.allCases) { lang in
+                                Text(lang.displayName).tag(lang)
+                            }
+                        }
+                        .labelsHidden()
+                        .pickerStyle(.menu)
+                        .frame(width: 170)
+                    }
+                    .padding(.top, 2)
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
                 
@@ -107,7 +123,7 @@ public struct SettingsView: View {
                 
                 // Section: Inactivity Timer (ActivityControlView)
                 VStack(alignment: .leading, spacing: 10) {
-                    Label("Temporizador de Inatividade", systemImage: "timer")
+                    Label("idle_timer_title", systemImage: "timer")
                         .font(.subheadline.weight(.semibold))
                         .foregroundStyle(.primary)
                     
@@ -120,7 +136,7 @@ public struct SettingsView: View {
                 // Section: Native Keyboard Shortcuts & OSD
                 VStack(alignment: .leading, spacing: 10) {
                     HStack {
-                        Label("Atalhos de Teclado Nativos", systemImage: "command")
+                        Label("settings_section_shortcuts", systemImage: "command")
                             .font(.subheadline.weight(.semibold))
                             .foregroundStyle(.primary)
                         Spacer()
@@ -128,7 +144,7 @@ public struct SettingsView: View {
                             Circle()
                                 .fill(shortcuts.isAccessibilityTrusted ? Color.green : Color.orange)
                                 .frame(width: 7, height: 7)
-                            Text(shortcuts.isAccessibilityTrusted ? "Acessibilidade Ativa" : "Requer Permissão")
+                            Text(shortcuts.isAccessibilityTrusted ? "accessibility_status_active" : "accessibility_status_required")
                                 .font(.caption2.weight(.medium))
                                 .foregroundStyle(shortcuts.isAccessibilityTrusted ? Color.green : Color.orange)
                         }
@@ -140,16 +156,16 @@ public struct SettingsView: View {
                         )
                     }
                     
-                    Toggle("Capturar teclas nativas de brilho (F5 e F6 / Teclas de Mídia)", isOn: $settings.captureNativeShortcuts)
+                    Toggle("settings_capture_shortcuts", isOn: $settings.captureNativeShortcuts)
                         .toggleStyle(.checkbox)
                     
-                    Toggle("Exibir indicador visual nativo na tela (OSD Bezel da Apple)", isOn: $settings.showNativeOSDBezel)
+                    Toggle("settings_show_osd", isOn: $settings.showNativeOSDBezel)
                         .toggleStyle(.checkbox)
                     
                     VStack(alignment: .leading, spacing: 4) {
-                        Text("• F5 / F6 ou Teclas de Mídia: diminui ou aumenta o brilho em passos de 1 bloco (1/16).")
-                        Text("• Option + Shift + F5 / F6: ajuste fino de 1/4 de bloco (1/64).")
-                        Text("• Control + Option + Seta Baixo / Cima: atalho universal alternativo.")
+                        Text("shortcuts_desc_step")
+                        Text("shortcuts_desc_fine")
+                        Text("shortcuts_desc_universal")
                     }
                     .font(.caption)
                     .foregroundStyle(.secondary)
@@ -159,7 +175,7 @@ public struct SettingsView: View {
                         Button {
                             shortcuts.openSystemSettingsAccessibility()
                         } label: {
-                            Label("Permitir Acesso em Ajustes do Sistema > Privacidade & Segurança > Acessibilidade", systemImage: "lock.shield")
+                            Label("shortcuts_permission_button", systemImage: "lock.shield")
                                 .font(.caption)
                         }
                         .buttonStyle(.link)
@@ -173,7 +189,7 @@ public struct SettingsView: View {
             // Section: Touch Bar
             VStack(alignment: .leading, spacing: 10) {
                 HStack {
-                    Label("Touch Bar do MacBook Pro", systemImage: "rectangle.topthird.inset.filled")
+                    Label("settings_section_touchbar", systemImage: "rectangle.topthird.inset.filled")
                         .font(.subheadline.weight(.semibold))
                         .foregroundStyle(.primary)
                     Spacer()
@@ -191,7 +207,7 @@ public struct SettingsView: View {
                             Circle()
                                 .fill(stageColor)
                                 .frame(width: 7, height: 7)
-                            Text(stage.rawValue)
+                            Text(LocalizedStringKey(stage.rawValue))
                                 .font(.caption2.weight(.medium))
                                 .foregroundStyle(stageColor)
                         }
@@ -202,31 +218,31 @@ public struct SettingsView: View {
                                 .fill(stageColor.opacity(0.12))
                         )
                     } else {
-                        Text("Não detectada")
+                        Text("touchbar_not_detected")
                             .font(.caption2)
                             .foregroundStyle(.secondary)
                     }
                 }
                 
                 if TouchBarController.isTouchBarAvailable {
-                    Toggle("Exibir atalho permanente no Control Strip", isOn: $settings.showInTouchBarControlStrip)
+                    Toggle("settings_touchbar_controlstrip", isOn: $settings.showInTouchBarControlStrip)
                         .toggleStyle(.checkbox)
                     
-                    Text("Permite tocar no ícone de teclado no canto direito da Touch Bar sobre qualquer aplicativo para controlar a iluminação.")
+                    Text("settings_touchbar_controlstrip_desc")
                         .font(.caption)
                         .foregroundStyle(.secondary)
                     
-                    Toggle("Sincronizar iluminação com o ciclo da Touch Bar", isOn: $settings.syncBacklightWithTouchBar)
+                    Toggle("settings_touchbar_sync", isOn: $settings.syncBacklightWithTouchBar)
                         .toggleStyle(.checkbox)
                         .padding(.top, 4)
                     
-                    Text("Diminui o teclado quando a Touch Bar esmaecer (~60s), apaga quando a Touch Bar desligar (~75s) e religa instantaneamente ao tocar no teclado, trackpad ou Touch Bar.")
+                    Text("settings_touchbar_sync_desc")
                         .font(.caption)
                         .foregroundStyle(.secondary)
                     
                     if settings.syncBacklightWithTouchBar {
                         HStack(spacing: 8) {
-                            Text("Brilho ao diminuir (dimming):")
+                            Text("settings_touchbar_dim_level")
                                 .font(.caption)
                                 .foregroundStyle(.secondary)
                             Slider(value: $settings.touchBarDimLevel, in: 0.05...0.40, step: 0.05)
@@ -240,20 +256,20 @@ public struct SettingsView: View {
                         .padding(.top, 2)
                     }
                     
-                    Toggle("Apagar ao fechar a tampa ou quando a tela apagar", isOn: $settings.sleepWithDisplayAndClamshell)
+                    Toggle("settings_sleep_clamshell_touchbar", isOn: $settings.sleepWithDisplayAndClamshell)
                         .toggleStyle(.checkbox)
                         .padding(.top, 4)
                 } else {
                     VStack(alignment: .leading, spacing: 8) {
-                        Text("Este Mac não possui Touch Bar física integrada.")
+                        Text("settings_no_touchbar_notice")
                             .font(.caption)
                             .foregroundStyle(.secondary)
                         
-                        Toggle("Apagar ao entrar em repouso, fechar a tampa ou desligar tela", isOn: $settings.sleepWithDisplayAndClamshell)
+                        Toggle("settings_sleep_clamshell_notouchbar", isOn: $settings.sleepWithDisplayAndClamshell)
                             .toggleStyle(.checkbox)
                             .padding(.top, 2)
                         
-                        Text("Desliga automaticamente a iluminação do teclado quando o MacBook entrar em repouso, quando a tela apagar ou ao baixar a tampa do Mac, restaurando o brilho ao retornar.")
+                        Text("settings_sleep_clamshell_notouchbar_desc")
                             .font(.caption)
                             .foregroundStyle(.secondary)
                         
@@ -262,7 +278,7 @@ public struct SettingsView: View {
                                 Circle()
                                     .fill(engine.isScreenSleeping ? Color.orange : Color.green)
                                     .frame(width: 7, height: 7)
-                                Text(engine.isScreenSleeping ? "Tela desligada" : "Tela ativa")
+                                Text(engine.isScreenSleeping ? "status_screen_off" : "status_screen_on")
                                     .font(.caption2.weight(.medium))
                                     .foregroundStyle(engine.isScreenSleeping ? Color.orange : Color.green)
                             }
@@ -277,7 +293,7 @@ public struct SettingsView: View {
                                 Circle()
                                     .fill(engine.isLidClosed ? Color.orange : Color.green)
                                     .frame(width: 7, height: 7)
-                                Text(engine.isLidClosed ? "Tampa fechada" : "Tampa aberta")
+                                Text(engine.isLidClosed ? "status_lid_closed" : "status_lid_open")
                                     .font(.caption2.weight(.medium))
                                     .foregroundStyle(engine.isLidClosed ? Color.orange : Color.green)
                             }
@@ -298,13 +314,13 @@ public struct SettingsView: View {
             
             // Section: Hardware
             VStack(alignment: .leading, spacing: 10) {
-                Label("Hardware Detectado", systemImage: "laptopcomputer")
+                Label("settings_section_hardware", systemImage: "laptopcomputer")
                     .font(.subheadline.weight(.semibold))
                     .foregroundStyle(.primary)
                 
                 VStack(alignment: .leading, spacing: 8) {
                     HStack {
-                        Text("Dispositivo:")
+                        Text("hardware_device")
                             .foregroundStyle(.secondary)
                         Spacer()
                         Text(engine.hardwareModel)
@@ -313,7 +329,7 @@ public struct SettingsView: View {
                     .font(.caption)
                     
                     HStack {
-                        Text("Protocolo:")
+                        Text("hardware_protocol")
                             .foregroundStyle(.secondary)
                         Spacer()
                         Text("IOKit HID (Report ID 1, 9 bytes)")
@@ -323,14 +339,14 @@ public struct SettingsView: View {
                     .font(.caption)
                     
                     HStack {
-                        Text("Status:")
+                        Text("hardware_status")
                             .foregroundStyle(.secondary)
                         Spacer()
                         HStack(spacing: 5) {
                             Circle()
                                 .fill(engine.isHardwareAvailable ? Color.green : Color.red)
                                 .frame(width: 8, height: 8)
-                            Text(engine.isHardwareAvailable ? "Conectado e Ativo" : "Não encontrado")
+                            Text(engine.isHardwareAvailable ? "hardware_connected" : "hardware_not_found")
                         }
                         .fontWeight(.medium)
                     }
@@ -363,6 +379,8 @@ public struct SettingsView: View {
 public typealias SettingsSheetView = SettingsView
 
 
+#if DEBUG
 #Preview {
     SettingsView()
 }
+#endif
