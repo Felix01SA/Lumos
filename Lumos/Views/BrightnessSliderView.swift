@@ -9,14 +9,20 @@ import SwiftUI
 
 public struct BrightnessSliderView: View {
     @ObservedObject var engine: KeyboardBacklightEngine
+    @ObservedObject var settings: LumosSettings
+    @ObservedObject var power: PowerManagementController
     
     @MainActor
     public init() {
         self.engine = .shared
+        self.settings = .shared
+        self.power = .shared
     }
     
-    public init(engine: KeyboardBacklightEngine) {
+    public init(engine: KeyboardBacklightEngine, settings: LumosSettings) {
         self.engine = engine
+        self.settings = settings
+        self.power = .shared
     }
     
     private var percentage: Int {
@@ -24,6 +30,9 @@ public struct BrightnessSliderView: View {
     }
     
     public var body: some View {
+        let maxAllowed = engine.maxAllowedBrightness
+        let isCapped = maxAllowed < 0.99
+        
         VStack(spacing: 8) {
             HStack {
                 Label("brightness_label", systemImage: "light.max")
@@ -31,6 +40,12 @@ public struct BrightnessSliderView: View {
                     .foregroundStyle(.secondary)
                 
                 Spacer()
+                
+                if isCapped {
+                    Text(String(format: String(localized: "slider_battery_cap_hint"), Int(round(maxAllowed * 100))))
+                        .font(.system(.caption2, design: .rounded).weight(.medium))
+                        .foregroundStyle(power.isLowPowerMode && settings.lowPowerModeDimEnabled ? Color.orange : Color.blue)
+                }
                 
                 Text("\(percentage)%")
                     .font(.system(.subheadline, design: .rounded).weight(.bold))
@@ -46,18 +61,19 @@ public struct BrightnessSliderView: View {
                 
                 Slider(
                     value: Binding(
-                        get: { engine.brightness },
+                        get: { min(engine.brightness, maxAllowed) },
                         set: { newValue in
-                            engine.setBrightness(newValue)
+                            let clamped = min(newValue, maxAllowed)
+                            engine.setBrightness(clamped)
                         }
                     ),
                     in: 0.0...1.0
                 )
-                .tint(.orange)
+                .tint(isCapped ? (power.isLowPowerMode ? .orange : .blue) : .orange)
                 
                 Image(systemName: "sun.max.fill")
                     .font(.system(size: 13, weight: .bold))
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(isCapped ? .tertiary : .secondary)
             }
             .padding(.horizontal, 4)
         }

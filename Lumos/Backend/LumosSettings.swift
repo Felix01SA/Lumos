@@ -53,6 +53,9 @@ public final class LumosSettings: ObservableObject {
         static let sleepWithDisplayAndClamshell = "lumos.v2.sleepWithDisplayAndClamshell"
         static let captureNativeShortcuts = "lumos.v2.captureNativeShortcuts"
         static let showNativeOSDBezel = "lumos.v2.showNativeOSDBezel"
+        static let batteryOptimizationEnabled = "lumos.v2.batteryOptimizationEnabled"
+        static let batteryMaxBrightness = "lumos.v2.batteryMaxBrightness"
+        static let lowPowerModeDimEnabled = "lumos.v2.lowPowerModeDimEnabled"
     }
     
     @Published public var appLanguage: AppLanguage {
@@ -111,6 +114,33 @@ public final class LumosSettings: ObservableObject {
         didSet { UserDefaults.standard.set(sleepWithDisplayAndClamshell, forKey: Keys.sleepWithDisplayAndClamshell) }
     }
     
+    @Published public var batteryOptimizationEnabled: Bool {
+        didSet {
+            UserDefaults.standard.set(batteryOptimizationEnabled, forKey: Keys.batteryOptimizationEnabled)
+            Task { @MainActor in
+                KeyboardBacklightEngine.shared.enforceMaxBrightnessLimit()
+            }
+        }
+    }
+    
+    @Published public var batteryMaxBrightness: Double {
+        didSet {
+            UserDefaults.standard.set(batteryMaxBrightness, forKey: Keys.batteryMaxBrightness)
+            Task { @MainActor in
+                KeyboardBacklightEngine.shared.enforceMaxBrightnessLimit()
+            }
+        }
+    }
+    
+    @Published public var lowPowerModeDimEnabled: Bool {
+        didSet {
+            UserDefaults.standard.set(lowPowerModeDimEnabled, forKey: Keys.lowPowerModeDimEnabled)
+            Task { @MainActor in
+                KeyboardBacklightEngine.shared.enforceMaxBrightnessLimit()
+            }
+        }
+    }
+    
     private init() {
         let defaults = UserDefaults.standard
         if let rawLang = defaults.string(forKey: Keys.appLanguage),
@@ -134,5 +164,8 @@ public final class LumosSettings: ObservableObject {
         self.sleepWithDisplayAndClamshell = defaults.object(forKey: Keys.sleepWithDisplayAndClamshell) as? Bool ?? true
         self.captureNativeShortcuts = defaults.object(forKey: Keys.captureNativeShortcuts) as? Bool ?? true
         self.showNativeOSDBezel = defaults.object(forKey: Keys.showNativeOSDBezel) as? Bool ?? true
+        self.batteryOptimizationEnabled = defaults.object(forKey: Keys.batteryOptimizationEnabled) as? Bool ?? true
+        self.batteryMaxBrightness = defaults.object(forKey: Keys.batteryMaxBrightness) as? Double ?? 0.50
+        self.lowPowerModeDimEnabled = defaults.object(forKey: Keys.lowPowerModeDimEnabled) as? Bool ?? true
     }
 }

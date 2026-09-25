@@ -11,12 +11,14 @@ public struct MenuBarPopupView: View {
     @ObservedObject var engine: KeyboardBacklightEngine
     @ObservedObject var settings: LumosSettings
     @ObservedObject var monitor: IdleActivityMonitor
+    @ObservedObject var power: PowerManagementController
     
     @MainActor
     public init() {
         self.engine = .shared
         self.settings = .shared
         self.monitor = .shared
+        self.power = .shared
     }
     
     public init(
@@ -27,6 +29,7 @@ public struct MenuBarPopupView: View {
         self.engine = engine
         self.settings = settings
         self.monitor = monitor
+        self.power = .shared
     }
     
     public var body: some View {
@@ -86,14 +89,64 @@ public struct MenuBarPopupView: View {
                 .help(LocalizedStringKey(engine.isOn ? "action_turn_off" : "action_turn_on"))
             }
             
+            // Low Power Mode or Battery Optimization Badge
+            if power.isLowPowerMode && settings.lowPowerModeDimEnabled {
+                HStack(spacing: 6) {
+                    Image(systemName: "leaf.fill")
+                        .font(.system(size: 11, weight: .bold))
+                    Text("power_low_power_active")
+                        .font(.system(size: 11, weight: .semibold))
+                    Spacer()
+                    Text("15% Máx")
+                        .font(.system(size: 10, weight: .bold, design: .rounded))
+                        .padding(.horizontal, 6)
+                        .padding(.vertical, 2)
+                        .background(
+                            Capsule().fill(Color.orange.opacity(0.2))
+                        )
+                }
+                .padding(.horizontal, 10)
+                .padding(.vertical, 6)
+                .background(
+                    RoundedRectangle(cornerRadius: 8, style: .continuous)
+                        .fill(Color.orange.opacity(0.12))
+                )
+                .foregroundStyle(Color.orange)
+                .transition(.opacity.combined(with: .scale))
+            } else if power.isOnBattery && settings.batteryOptimizationEnabled && engine.maxAllowedBrightness < 0.99 {
+                HStack(spacing: 6) {
+                    Image(systemName: "battery.75")
+                        .font(.system(size: 11, weight: .bold))
+                    Text("settings_battery_optimize")
+                        .font(.system(size: 10, weight: .medium))
+                        .lineLimit(1)
+                    Spacer()
+                    Text("\(Int(round(engine.maxAllowedBrightness * 100)))% Máx")
+                        .font(.system(size: 10, weight: .bold, design: .rounded))
+                        .padding(.horizontal, 6)
+                        .padding(.vertical, 2)
+                        .background(
+                            Capsule().fill(Color.blue.opacity(0.2))
+                        )
+                }
+                .padding(.horizontal, 10)
+                .padding(.vertical, 6)
+                .background(
+                    RoundedRectangle(cornerRadius: 8, style: .continuous)
+                        .fill(Color.blue.opacity(0.10))
+                )
+                .foregroundStyle(Color.blue)
+                .transition(.opacity.combined(with: .scale))
+            }
+            
             Divider()
                 .padding(.horizontal, -4)
             
             // Brightness Slider
-            BrightnessSliderView(engine: engine)
+            BrightnessSliderView(engine: engine, settings: settings)
             
             // Quick Presets
-            PresetsView(engine: engine)
+            PresetsView(engine: engine, settings: settings)
             
             Divider()
                 .padding(.horizontal, -4)

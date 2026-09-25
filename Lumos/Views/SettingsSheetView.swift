@@ -14,6 +14,7 @@ public struct SettingsView: View {
     @ObservedObject var monitor: IdleActivityMonitor
     @ObservedObject var shortcuts: KeyboardShortcutManager
     @ObservedObject var launchManager: LaunchAtLoginManager
+    @ObservedObject var power: PowerManagementController
     
     @MainActor
     public init() {
@@ -23,6 +24,7 @@ public struct SettingsView: View {
         self.monitor = .shared
         self.shortcuts = .shared
         self.launchManager = .shared
+        self.power = .shared
     }
     
     @MainActor
@@ -33,6 +35,7 @@ public struct SettingsView: View {
         self.monitor = .shared
         self.shortcuts = .shared
         self.launchManager = .shared
+        self.power = .shared
     }
     
     @MainActor
@@ -43,6 +46,7 @@ public struct SettingsView: View {
         self.monitor = .shared
         self.shortcuts = .shared
         self.launchManager = .shared
+        self.power = .shared
     }
     
     @MainActor
@@ -59,6 +63,7 @@ public struct SettingsView: View {
         self.monitor = monitor
         self.shortcuts = shortcuts
         self.launchManager = .shared
+        self.power = .shared
     }
     
     public var body: some View {
@@ -330,6 +335,75 @@ public struct SettingsView: View {
                         .padding(.top, 2)
                     }
                 }
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            
+            Divider()
+            
+            // Section: Power & Battery
+            VStack(alignment: .leading, spacing: 10) {
+                HStack {
+                    Label("settings_section_power", systemImage: "battery.100.bolt")
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(.primary)
+                    Spacer()
+                    
+                    HStack(spacing: 8) {
+                        HStack(spacing: 5) {
+                            Image(systemName: power.isOnBattery ? "battery.75" : "bolt.fill")
+                                .font(.caption2)
+                            Text(power.isOnBattery ? "\(power.batteryPercent)%" : LocalizedStringKey("power_source_ac"))
+                                .font(.caption2.weight(.medium))
+                        }
+                        .foregroundStyle(power.isOnBattery ? Color.blue : Color.green)
+                        .padding(.horizontal, 7)
+                        .padding(.vertical, 3)
+                        .background(
+                            Capsule()
+                                .fill((power.isOnBattery ? Color.blue : Color.green).opacity(0.12))
+                        )
+                        
+                        if power.isLowPowerMode {
+                            HStack(spacing: 4) {
+                                Circle().fill(Color.orange).frame(width: 6, height: 6)
+                                Text("power_low_power_active")
+                                    .font(.caption2.weight(.medium))
+                                    .foregroundStyle(Color.orange)
+                            }
+                            .padding(.horizontal, 7)
+                            .padding(.vertical, 3)
+                            .background(
+                                Capsule().fill(Color.orange.opacity(0.12))
+                            )
+                        }
+                    }
+                }
+                
+                Toggle("settings_battery_optimize", isOn: $settings.batteryOptimizationEnabled)
+                    .toggleStyle(.checkbox)
+                
+                if settings.batteryOptimizationEnabled {
+                    HStack(spacing: 8) {
+                        Text("settings_battery_max_ceiling")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                        
+                        Picker("", selection: $settings.batteryMaxBrightness) {
+                            Text("25%").tag(0.25)
+                            Text("50%").tag(0.50)
+                            Text("75%").tag(0.75)
+                        }
+                        .labelsHidden()
+                        .pickerStyle(.segmented)
+                        .frame(width: 140)
+                    }
+                    .padding(.leading, 18)
+                    .padding(.top, 2)
+                }
+                
+                Toggle("settings_low_power_dim", isOn: $settings.lowPowerModeDimEnabled)
+                    .toggleStyle(.checkbox)
+                    .padding(.top, 2)
             }
             .frame(maxWidth: .infinity, alignment: .leading)
             

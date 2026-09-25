@@ -9,6 +9,8 @@ import SwiftUI
 
 public struct PresetsView: View {
     @ObservedObject var engine: KeyboardBacklightEngine
+    @ObservedObject var settings: LumosSettings
+    @ObservedObject var power: PowerManagementController
     
     private let presets: [(label: String, value: Double)] = [
         ("0%", 0.0),
@@ -21,10 +23,14 @@ public struct PresetsView: View {
     @MainActor
     public init() {
         self.engine = .shared
+        self.settings = .shared
+        self.power = .shared
     }
     
-    public init(engine: KeyboardBacklightEngine) {
+    public init(engine: KeyboardBacklightEngine, settings: LumosSettings) {
         self.engine = engine
+        self.settings = settings
+        self.power = .shared
     }
     
     public var body: some View {
@@ -36,7 +42,8 @@ public struct PresetsView: View {
             
             HStack(spacing: 6) {
                 ForEach(presets, id: \.value) { preset in
-                    let isSelected = isPresetActive(preset.value)
+                    let isCapped = preset.value > engine.maxAllowedBrightness
+                    let isSelected = !isCapped && isPresetActive(preset.value)
                     
                     Button {
                         withAnimation(.spring(response: 0.25, dampingFraction: 0.75)) {
@@ -49,15 +56,14 @@ public struct PresetsView: View {
                             .padding(.vertical, 6)
                             .background(
                                 RoundedRectangle(cornerRadius: 8, style: .continuous)
-                                    .fill(isSelected ? Color.accentColor : Color(nsColor: .controlBackgroundColor))
+                                    .fill(isSelected ? Color.accentColor : Color(nsColor: .controlBackgroundColor).opacity(isCapped ? 0.4 : 1.0))
                             )
-                            .foregroundStyle(isSelected ? Color.white : Color.primary)
-//                            .overlay(
-//                                RoundedRectangle(cornerRadius: 8, style: .continuous)
-//                                    .stroke(isSelected ? Color.clear : Color.primary.opacity(0.8), lineWidth: 1)
-//                            )
+                            .foregroundStyle(isSelected ? Color.white : (isCapped ? Color.secondary.opacity(0.4) : Color.primary))
                     }
                     .buttonStyle(.plain).border(.clear)
+                    .disabled(isCapped)
+//                    .opacity(isCapped ? 0.8 : 1.0)
+                    .help(isCapped ? String(localized: "preset_disabled_by_power_saving") : "")
                 }
             }
         }

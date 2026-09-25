@@ -53,7 +53,12 @@ public final class KeyboardBacklightEngine: ObservableObject {
     
     @Published public var brightness: Double = 0.75 {
         didSet {
-            let clamped = min(max(brightness, 0.0), 1.0)
+            let maxVal = maxAllowedBrightness
+            let clamped = min(max(brightness, 0.0), maxVal)
+            if clamped != brightness {
+                brightness = clamped
+                return
+            }
             if !isApplyingInternalState {
                 applyBrightnessToHardware(clamped)
                 if clamped > 0.01 {
@@ -247,8 +252,32 @@ public final class KeyboardBacklightEngine: ObservableObject {
         return false
     }
     
+    public var maxAllowedBrightness: Double {
+        let power = PowerManagementController.shared
+        let settings = LumosSettings.shared
+        
+        if power.isLowPowerMode && settings.lowPowerModeDimEnabled {
+            return 0.15
+        } else if power.isOnBattery && settings.batteryOptimizationEnabled {
+            return settings.batteryMaxBrightness
+        }
+        return 1.0
+    }
+    
+    public func enforceMaxBrightnessLimit() {
+        let maxVal = maxAllowedBrightness
+        if brightness > maxVal {
+            setBrightness(maxVal)
+        } else if isOn && !isIdleDimmed && !isPowerSavingDimmed {
+            applyBrightnessToHardware(brightness)
+        }
+    }
+    
     public func evaluateBacklightPowerState() {
-        guard LumosSettings.shared.sleepWithDisplayAndClamshell else { return }
+        guard LumosSettings.shared.sleepWithDisplayAndClamshell else {
+            enforceMaxBrightnessLimit()
+            return
+        }
         let shouldTurnOff = isSystemSleeping || isScreenSleeping || isLidClosed
         
         if shouldTurnOff {
@@ -257,19 +286,21 @@ public final class KeyboardBacklightEngine: ObservableObject {
             applyBrightnessToHardware(0.0)
         } else {
             stopAnimation()
-            if isPowerSavingDimmed {
-                isPowerSavingDimmed = false
-                if isOn {
-                    // Reset Touch Bar stage to active on wake
-                    if TouchBarController.isTouchBarAvailable {
-                        TouchBarController.shared.updateTouchBarStage(.active)
-                        touchBarSyncStage = .active
-                        isIdleDimmed = false
-                    }
-                    applyBrightnessToHardware(brightness)
+            isPowerSavingDimmed = false
+            if isOn {
+                enforceMaxBrightnessLimit()
+                // Reset Touch Bar stage to active on wake
+                if TouchBarController.isTouchBarAvailable {
+                    TouchBarController.shared.updateTouchBarStage(.active)
+                    touchBarSyncStage = .active
+                    isIdleDimmed = false
                 }
             }
         }
+    }
+    
+    public func effectiveBrightness(for target: Double) -> Double {
+        return min(target, maxAllowedBrightness)
     }
     
     // MARK: - Hardware Control
@@ -280,7 +311,12 @@ public final class KeyboardBacklightEngine: ObservableObject {
             return
         }
         
-        let rawVal = normalizedToRaw(normalized)
+        var effective = normalized
+        if normalized > 0.001 && !isIdleDimmed && !isPowerSavingDimmed {
+            effective = effectiveBrightness(for: normalized)
+        }
+        
+        let rawVal = normalizedToRaw(effective)
         
         if directDevices.isEmpty {
             refreshDirectDevices()
@@ -374,7 +410,8 @@ public final class KeyboardBacklightEngine: ObservableObject {
         if touchBarSyncStage != .active {
             touchBarSyncStage = .active
         }
-        brightness = min(max(level, 0.0), 1.0)
+        let maxVal = maxAllowedBrightness
+        brightness = min(max(level, 0.0), maxVal)
     }
     
     public func applyPreset(_ preset: Double) {
@@ -401,7 +438,7 @@ public final class KeyboardBacklightEngine: ObservableObject {
         }
         
         let step = fine ? (1.0 / 64.0) : (1.0 / 16.0)
-        let newLevel = min(brightness + step, 1.0)
+        let newLevel = min(brightness + step, maxAllowedBrightness)
         setBrightness(newLevel)
         
         if LumosSettings.shared.showNativeOSDBezel {
