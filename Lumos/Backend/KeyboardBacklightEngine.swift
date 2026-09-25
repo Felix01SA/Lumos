@@ -274,11 +274,8 @@ public final class KeyboardBacklightEngine: ObservableObject {
     }
     
     public func evaluateBacklightPowerState() {
-        guard LumosSettings.shared.sleepWithDisplayAndClamshell else {
-            enforceMaxBrightnessLimit()
-            return
-        }
-        let shouldTurnOff = isSystemSleeping || isScreenSleeping || isLidClosed
+        let isExtKeyboardOff = ExternalKeyboardMonitor.shared.hasExternalKeyboard && LumosSettings.shared.disableOnExternalKeyboard
+        let shouldTurnOff = (LumosSettings.shared.sleepWithDisplayAndClamshell && (isSystemSleeping || isScreenSleeping || isLidClosed)) || isExtKeyboardOff
         
         if shouldTurnOff {
             stopAnimation()
@@ -306,8 +303,9 @@ public final class KeyboardBacklightEngine: ObservableObject {
     // MARK: - Hardware Control
     
     public func applyBrightnessToHardware(_ normalized: Double) {
-        if LumosSettings.shared.sleepWithDisplayAndClamshell && (isSystemSleeping || isScreenSleeping || isLidClosed) && normalized > 0.001 {
-            print("[Lumos] Blocked hardware brightness \(normalized) because system/display is sleeping or lid is closed.")
+        let isExtKeyboardOff = ExternalKeyboardMonitor.shared.hasExternalKeyboard && LumosSettings.shared.disableOnExternalKeyboard
+        if ((LumosSettings.shared.sleepWithDisplayAndClamshell && (isSystemSleeping || isScreenSleeping || isLidClosed)) || isExtKeyboardOff) && normalized > 0.001 {
+            print("[Lumos] Blocked hardware brightness \(normalized) because external keyboard is active or system/display is sleeping.")
             return
         }
         

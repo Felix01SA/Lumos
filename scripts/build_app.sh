@@ -100,6 +100,7 @@ SWIFT_SOURCES=(
     "$PROJECT_DIR/Lumos/Backend/SettingsWindowController.swift"
     "$PROJECT_DIR/Lumos/Backend/LaunchAtLoginManager.swift"
     "$PROJECT_DIR/Lumos/Backend/PowerManagementController.swift"
+    "$PROJECT_DIR/Lumos/Backend/ExternalKeyboardMonitor.swift"
     "$PROJECT_DIR/Lumos/Views/BrightnessSliderView.swift"
     "$PROJECT_DIR/Lumos/Views/PresetsView.swift"
     "$PROJECT_DIR/Lumos/Views/ActivityControlView.swift"

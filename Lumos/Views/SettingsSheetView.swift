@@ -15,6 +15,7 @@ public struct SettingsView: View {
     @ObservedObject var shortcuts: KeyboardShortcutManager
     @ObservedObject var launchManager: LaunchAtLoginManager
     @ObservedObject var power: PowerManagementController
+    @ObservedObject var externalKeyboard: ExternalKeyboardMonitor
     
     @MainActor
     public init() {
@@ -25,6 +26,7 @@ public struct SettingsView: View {
         self.shortcuts = .shared
         self.launchManager = .shared
         self.power = .shared
+        self.externalKeyboard = .shared
     }
     
     @MainActor
@@ -36,6 +38,7 @@ public struct SettingsView: View {
         self.shortcuts = .shared
         self.launchManager = .shared
         self.power = .shared
+        self.externalKeyboard = .shared
     }
     
     @MainActor
@@ -47,6 +50,7 @@ public struct SettingsView: View {
         self.shortcuts = .shared
         self.launchManager = .shared
         self.power = .shared
+        self.externalKeyboard = .shared
     }
     
     @MainActor
@@ -64,6 +68,7 @@ public struct SettingsView: View {
         self.shortcuts = shortcuts
         self.launchManager = .shared
         self.power = .shared
+        self.externalKeyboard = .shared
     }
     
     public var body: some View {
@@ -404,6 +409,42 @@ public struct SettingsView: View {
                 Toggle("settings_low_power_dim", isOn: $settings.lowPowerModeDimEnabled)
                     .toggleStyle(.checkbox)
                     .padding(.top, 2)
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            
+            Divider()
+            
+            // Section: External Keyboard
+            VStack(alignment: .leading, spacing: 10) {
+                HStack {
+                    Label("settings_section_external_keyboard", systemImage: "keyboard")
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(.primary)
+                    Spacer()
+                    
+                    HStack(spacing: 5) {
+                        Circle()
+                            .fill(externalKeyboard.hasExternalKeyboard ? Color.green : Color.secondary.opacity(0.5))
+                            .frame(width: 7, height: 7)
+                        Text(externalKeyboard.hasExternalKeyboard ? (externalKeyboard.externalKeyboardName.isEmpty ? LocalizedStringKey("external_keyboard_connected") : LocalizedStringKey(externalKeyboard.externalKeyboardName)) : LocalizedStringKey("external_keyboard_none"))
+                            .font(.caption2.weight(.medium))
+                            .foregroundStyle(externalKeyboard.hasExternalKeyboard ? Color.green : Color.secondary)
+                    }
+                    .padding(.horizontal, 7)
+                    .padding(.vertical, 3)
+                    .background(
+                        Capsule()
+                            .fill((externalKeyboard.hasExternalKeyboard ? Color.green : Color.secondary).opacity(0.12))
+                    )
+                }
+                
+                Toggle("settings_disable_on_external_keyboard", isOn: $settings.disableOnExternalKeyboard)
+                    .toggleStyle(.checkbox)
+                
+                Text("settings_disable_on_external_keyboard_desc")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .padding(.leading, 18)
             }
             .frame(maxWidth: .infinity, alignment: .leading)
             

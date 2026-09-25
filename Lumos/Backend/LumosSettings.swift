@@ -56,6 +56,7 @@ public final class LumosSettings: ObservableObject {
         static let batteryOptimizationEnabled = "lumos.v2.batteryOptimizationEnabled"
         static let batteryMaxBrightness = "lumos.v2.batteryMaxBrightness"
         static let lowPowerModeDimEnabled = "lumos.v2.lowPowerModeDimEnabled"
+        static let disableOnExternalKeyboard = "lumos.v2.disableOnExternalKeyboard"
     }
     
     @Published public var appLanguage: AppLanguage {
@@ -141,6 +142,15 @@ public final class LumosSettings: ObservableObject {
         }
     }
     
+    @Published public var disableOnExternalKeyboard: Bool {
+        didSet {
+            UserDefaults.standard.set(disableOnExternalKeyboard, forKey: Keys.disableOnExternalKeyboard)
+            Task { @MainActor in
+                KeyboardBacklightEngine.shared.evaluateBacklightPowerState()
+            }
+        }
+    }
+    
     private init() {
         let defaults = UserDefaults.standard
         if let rawLang = defaults.string(forKey: Keys.appLanguage),
@@ -167,5 +177,6 @@ public final class LumosSettings: ObservableObject {
         self.batteryOptimizationEnabled = defaults.object(forKey: Keys.batteryOptimizationEnabled) as? Bool ?? true
         self.batteryMaxBrightness = defaults.object(forKey: Keys.batteryMaxBrightness) as? Double ?? 0.50
         self.lowPowerModeDimEnabled = defaults.object(forKey: Keys.lowPowerModeDimEnabled) as? Bool ?? true
+        self.disableOnExternalKeyboard = defaults.object(forKey: Keys.disableOnExternalKeyboard) as? Bool ?? false
     }
 }
