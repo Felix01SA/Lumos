@@ -98,6 +98,7 @@ SWIFT_SOURCES=(
     "$PROJECT_DIR/Lumos/Backend/OSDBezelController.swift"
     "$PROJECT_DIR/Lumos/Backend/KeyboardShortcutManager.swift"
     "$PROJECT_DIR/Lumos/Backend/SettingsWindowController.swift"
+    "$PROJECT_DIR/Lumos/Backend/LaunchAtLoginManager.swift"
     "$PROJECT_DIR/Lumos/Views/BrightnessSliderView.swift"
     "$PROJECT_DIR/Lumos/Views/PresetsView.swift"
     "$PROJECT_DIR/Lumos/Views/ActivityControlView.swift"
@@ -115,6 +116,7 @@ swiftc \
     -framework IOKit \
     -framework Cocoa \
     -framework CoreGraphics \
+    -framework ServiceManagement \
     -parse-as-library \
     -o "$APP_DIR/Contents/MacOS/Lumos" \
     "${SWIFT_SOURCES[@]}"

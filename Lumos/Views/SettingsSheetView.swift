@@ -13,6 +13,7 @@ public struct SettingsView: View {
     @ObservedObject var touchBar: TouchBarController
     @ObservedObject var monitor: IdleActivityMonitor
     @ObservedObject var shortcuts: KeyboardShortcutManager
+    @ObservedObject var launchManager: LaunchAtLoginManager
     
     @MainActor
     public init() {
@@ -21,6 +22,7 @@ public struct SettingsView: View {
         self.touchBar = .shared
         self.monitor = .shared
         self.shortcuts = .shared
+        self.launchManager = .shared
     }
     
     @MainActor
@@ -30,6 +32,7 @@ public struct SettingsView: View {
         self.touchBar = .shared
         self.monitor = .shared
         self.shortcuts = .shared
+        self.launchManager = .shared
     }
     
     @MainActor
@@ -39,6 +42,7 @@ public struct SettingsView: View {
         self.touchBar = touchBar
         self.monitor = .shared
         self.shortcuts = .shared
+        self.launchManager = .shared
     }
     
     @MainActor
@@ -54,6 +58,7 @@ public struct SettingsView: View {
         self.touchBar = touchBar
         self.monitor = monitor
         self.shortcuts = shortcuts
+        self.launchManager = .shared
     }
     
     public var body: some View {
@@ -100,6 +105,24 @@ public struct SettingsView: View {
                     
                     Toggle("settings_show_percentage", isOn: $settings.showPercentageInMenuBar)
                         .toggleStyle(.checkbox)
+                    
+                    Toggle("settings_launch_at_login", isOn: Binding(
+                        get: { launchManager.isEnabled },
+                        set: { launchManager.setEnabled($0) }
+                    ))
+                    .toggleStyle(.checkbox)
+                    
+                    if launchManager.requiresApproval {
+                        Button {
+                            launchManager.openSystemSettingsLoginItems()
+                        } label: {
+                            Label("launch_at_login_status_requires_approval", systemImage: "exclamationmark.triangle")
+                                .font(.caption)
+                                .foregroundStyle(.orange)
+                        }
+                        .buttonStyle(.link)
+                        .padding(.leading, 18)
+                    }
                     
                     HStack(spacing: 8) {
                         Text("settings_language_label")
