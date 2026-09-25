@@ -14,6 +14,11 @@ struct LumosApp: App {
     @StateObject private var monitor = IdleActivityMonitor.shared
     @StateObject private var touchBarController = TouchBarController.shared
     @StateObject private var shortcutManager = KeyboardShortcutManager.shared
+    
+    init() {
+        LumosCLIHandler.handleCLIIfRequested()
+        LumosCLIHandler.shared.startListening()
+    }
 
     var body: some Scene {
         let currentLocale = settings.appLanguage.effectiveLocale

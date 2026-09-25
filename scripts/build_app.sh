@@ -101,6 +101,7 @@ SWIFT_SOURCES=(
     "$PROJECT_DIR/Lumos/Backend/LaunchAtLoginManager.swift"
     "$PROJECT_DIR/Lumos/Backend/PowerManagementController.swift"
     "$PROJECT_DIR/Lumos/Backend/ExternalKeyboardMonitor.swift"
+    "$PROJECT_DIR/Lumos/Backend/LumosCLIHandler.swift"
     "$PROJECT_DIR/Lumos/Views/BrightnessSliderView.swift"
     "$PROJECT_DIR/Lumos/Views/PresetsView.swift"
     "$PROJECT_DIR/Lumos/Views/ActivityControlView.swift"
@@ -123,7 +124,16 @@ swiftc \
     -o "$APP_DIR/Contents/MacOS/Lumos" \
     "${SWIFT_SOURCES[@]}"
 
+echo "==> Generating CLI executable helper (build/lumos)..."
+cat << 'EOF' > "$PROJECT_DIR/build/lumos"
+#!/bin/bash
+DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+"$DIR/Lumos.app/Contents/MacOS/Lumos" "$@"
+EOF
+chmod +x "$PROJECT_DIR/build/lumos"
+
 echo "==> Codesigning Lumos.app (ad-hoc)..."
 codesign --force --deep --sign - "$APP_DIR"
 
 echo "==> Lumos built successfully at: $APP_DIR"
+echo "==> CLI helper available at: $PROJECT_DIR/build/lumos"
