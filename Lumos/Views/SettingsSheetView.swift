@@ -502,7 +502,7 @@ public struct SettingsView: View {
             
             // Footer
             HStack {
-                Text("Lumos v1.0 • macOS")
+                Text("Lumos v1.5 • macOS")
                     .font(.caption2)
                     .foregroundStyle(.tertiary)
                 Spacer()
