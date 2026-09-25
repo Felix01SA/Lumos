@@ -102,6 +102,7 @@ SWIFT_SOURCES=(
     "$PROJECT_DIR/Lumos/Backend/PowerManagementController.swift"
     "$PROJECT_DIR/Lumos/Backend/ExternalKeyboardMonitor.swift"
     "$PROJECT_DIR/Lumos/Backend/LumosCLIHandler.swift"
+    "$PROJECT_DIR/Lumos/Backend/LumosIntents.swift"
     "$PROJECT_DIR/Lumos/Views/BrightnessSliderView.swift"
     "$PROJECT_DIR/Lumos/Views/PresetsView.swift"
     "$PROJECT_DIR/Lumos/Views/ActivityControlView.swift"
@@ -120,6 +121,7 @@ swiftc \
     -framework Cocoa \
     -framework CoreGraphics \
     -framework ServiceManagement \
+    -framework AppIntents \
     -parse-as-library \
     -o "$APP_DIR/Contents/MacOS/Lumos" \
     "${SWIFT_SOURCES[@]}"
