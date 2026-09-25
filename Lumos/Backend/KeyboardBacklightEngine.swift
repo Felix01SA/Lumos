@@ -267,9 +267,9 @@ public final class KeyboardBacklightEngine: ObservableObject {
     public func enforceMaxBrightnessLimit() {
         let maxVal = maxAllowedBrightness
         if brightness > maxVal {
-            setBrightness(maxVal)
+            setBrightness(maxVal, duration: 200)
         } else if isOn && !isIdleDimmed && !isPowerSavingDimmed {
-            applyBrightnessToHardware(brightness)
+            applyBrightnessToHardware(brightness, duration: 200)
         }
     }
     
@@ -302,7 +302,9 @@ public final class KeyboardBacklightEngine: ObservableObject {
     
     // MARK: - Hardware Control
     
-    public func applyBrightnessToHardware(_ normalized: Double) {
+    private var pendingDuration: UInt32 = 0
+    
+    public func applyBrightnessToHardware(_ normalized: Double, duration: UInt32? = nil) {
         let isExtKeyboardOff = ExternalKeyboardMonitor.shared.hasExternalKeyboard && LumosSettings.shared.disableOnExternalKeyboard
         if ((LumosSettings.shared.sleepWithDisplayAndClamshell && (isSystemSleeping || isScreenSleeping || isLidClosed)) || isExtKeyboardOff) && normalized > 0.001 {
             print("[Lumos] Blocked hardware brightness \(normalized) because external keyboard is active or system/display is sleeping.")
@@ -330,7 +332,9 @@ public final class KeyboardBacklightEngine: ObservableObject {
         withUnsafeBytes(of: bLE) { p in
             for i in 0..<4 { buffer[1 + i] = p[i] }
         }
-        let dLE = UInt32(0).littleEndian
+        let dur = duration ?? pendingDuration
+        pendingDuration = 0
+        let dLE = dur.littleEndian
         withUnsafeBytes(of: dLE) { p in
             for i in 0..<4 { buffer[5 + i] = p[i] }
         }
@@ -390,23 +394,26 @@ public final class KeyboardBacklightEngine: ObservableObject {
         }
         
         if isOn {
-            // Save last level and turn off
+            // Save last level and turn off with smooth fade
             LumosSettings.shared.lastActiveBrightness = max(brightness, 0.3)
-            setBrightness(0.0)
+            setBrightness(0.0, duration: 300)
         } else {
-            // Restore last active level
+            // Restore last active level with smooth fade
             let restore = max(LumosSettings.shared.lastActiveBrightness, 0.3)
-            setBrightness(restore)
+            setBrightness(restore, duration: 350)
         }
     }
     
-    public func setBrightness(_ level: Double) {
+    public func setBrightness(_ level: Double, duration: UInt32 = 0) {
         stopAnimation()
         if isIdleDimmed {
             isIdleDimmed = false
         }
         if touchBarSyncStage != .active {
             touchBarSyncStage = .active
+        }
+        if duration > 0 {
+            pendingDuration = duration
         }
         let maxVal = maxAllowedBrightness
         brightness = min(max(level, 0.0), maxVal)
@@ -420,7 +427,7 @@ public final class KeyboardBacklightEngine: ObservableObject {
         if touchBarSyncStage != .active {
             touchBarSyncStage = .active
         }
-        setBrightness(preset)
+        setBrightness(preset, duration: 250)
     }
     
     // MARK: - Native Keyboard Shortcut Stepping
@@ -437,7 +444,7 @@ public final class KeyboardBacklightEngine: ObservableObject {
         
         let step = fine ? (1.0 / 64.0) : (1.0 / 16.0)
         let newLevel = min(brightness + step, maxAllowedBrightness)
-        setBrightness(newLevel)
+        setBrightness(newLevel, duration: 80)
         
         if LumosSettings.shared.showNativeOSDBezel {
             OSDBezelController.shared.showBacklightBezel(brightness: newLevel)
@@ -456,7 +463,7 @@ public final class KeyboardBacklightEngine: ObservableObject {
         
         let step = fine ? (1.0 / 64.0) : (1.0 / 16.0)
         let newLevel = max(brightness - step, 0.0)
-        setBrightness(newLevel)
+        setBrightness(newLevel, duration: 80)
         
         if LumosSettings.shared.showNativeOSDBezel {
             OSDBezelController.shared.showBacklightBezel(brightness: newLevel)
@@ -540,33 +547,11 @@ public final class KeyboardBacklightEngine: ObservableObject {
             return
         }
         
-        let steps = 12
-        let stepInterval = duration / Double(steps)
-        var currentStep = 0
-        
-        animationTimer = Timer.scheduledTimer(withTimeInterval: stepInterval, repeats: true) { [weak self] timer in
-            Task { @MainActor [weak self] in
-                guard let self = self else { timer.invalidate(); return }
-                
-                if self.isSystemSleeping || self.isScreenSleeping || self.isLidClosed {
-                    self.stopAnimation()
-                    self.applyBrightnessToHardware(0.0)
-                    return
-                }
-                
-                currentStep += 1
-                let progress = Double(currentStep) / Double(steps)
-                let current = start + (end - start) * progress
-                
-                self.isApplyingInternalState = true
-                self.applyBrightnessToHardware(current)
-                self.isApplyingInternalState = false
-                
-                if currentStep >= steps {
-                    self.stopAnimation()
-                    self.applyBrightnessToHardware(end)
-                }
-            }
-        }
+        let ms = UInt32(max(duration * 1000.0, 50.0))
+        let target = min(max(end, 0.0), maxAllowedBrightness)
+        isApplyingInternalState = true
+        brightness = target
+        applyBrightnessToHardware(target, duration: ms)
+        isApplyingInternalState = false
     }
 }

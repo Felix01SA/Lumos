@@ -49,7 +49,7 @@ public struct MenuBarPopupView: View {
                                 )
                             )
                             .frame(width: 28, height: 28)
-                            .shadow(color: engine.isOn ? Color.orange.opacity(0.4) : .clear, radius: 4)
+                            .shadow(color: engine.isOn ? Color.orange.opacity(0.2 + engine.brightness * 0.4) : .clear, radius: 4 + CGFloat(engine.brightness * 5))
                         
                         Image("icon").resizable()
                             .frame(width: 40, height: 40)
@@ -78,7 +78,7 @@ public struct MenuBarPopupView: View {
                         Circle()
                             .fill(engine.isOn ? Color.accentColor : Color(nsColor: .controlBackgroundColor))
                             .frame(width: 30, height: 30)
-                            .shadow(color: engine.isOn ? Color.accentColor.opacity(0.4) : .clear, radius: 5)
+                            .shadow(color: engine.isOn ? Color.accentColor.opacity(0.2 + engine.brightness * 0.35) : .clear, radius: 4 + CGFloat(engine.brightness * 4))
                         
                         Image(systemName: "power")
                             .font(.system(size: 13, weight: .semibold))
