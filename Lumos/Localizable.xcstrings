@@ -303,6 +303,40 @@
         }
       }
     },
+    "hardware_reconnect_button" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Reconnect Hardware"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Reconectar Hardware"
+          }
+        }
+      }
+    },
+    "hardware_reconnect_desc" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Reset USB/SPI IOKit connection"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Redefinir conexão USB/SPI IOKit"
+          }
+        }
+      }
+    },
     "idle_auto_dim_toggle" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -442,7 +476,7 @@
         }
       }
     },
-    "Lumos v1.5 • macOS" : {
+    "Lumos v1.6 • macOS" : {
 
     },
     "power_low_power_active" : {

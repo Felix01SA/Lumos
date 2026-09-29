@@ -42,6 +42,7 @@ public final class KeyboardBacklightEngine: ObservableObject {
     
     private var notifyPort: IONotificationPortRef?
     private var rootDomainNotifier: io_object_t = 0
+    private var wakeRetryTask: Task<Void, Never>?
     
     public var isTouchBarSleeping: Bool {
         touchBarSyncStage == .sleeping
@@ -97,9 +98,27 @@ public final class KeyboardBacklightEngine: ObservableObject {
         }
     }
     
-    // MARK: - Direct WebHID Setup
+    // MARK: - Direct WebHID Setup & Resilient Lifecycle
+    
+    public func teardownDirectHID() {
+        if let manager = hidManager {
+            IOHIDManagerUnscheduleFromRunLoop(manager, CFRunLoopGetMain(), CFRunLoopMode.defaultMode.rawValue)
+            IOHIDManagerRegisterDeviceMatchingCallback(manager, nil, nil)
+            IOHIDManagerRegisterDeviceRemovalCallback(manager, nil, nil)
+            IOHIDManagerClose(manager, IOOptionBits(kIOHIDOptionsTypeNone))
+            self.hidManager = nil
+        }
+        
+        for dev in directDevices {
+            IOHIDDeviceClose(dev, IOOptionBits(kIOHIDOptionsTypeNone))
+        }
+        directDevices.removeAll()
+        isHardwareAvailable = false
+    }
     
     private func setupDirectHID() {
+        teardownDirectHID()
+        
         let manager = IOHIDManagerCreate(kCFAllocatorDefault, IOOptionBits(kIOHIDOptionsTypeNone))
         self.hidManager = manager
         
@@ -111,12 +130,85 @@ public final class KeyboardBacklightEngine: ObservableObject {
         ]
         
         IOHIDManagerSetDeviceMatching(manager, match as CFDictionary)
-        _ = IOHIDManagerOpen(manager, IOOptionBits(kIOHIDOptionsTypeNone))
+        
+        // Register matching & removal callbacks so we dynamically react to hardware reconnecting after sleep
+        let selfPtr = Unmanaged.passUnretained(self).toOpaque()
+        
+        let matchCallback: IOHIDDeviceCallback = { context, result, sender, device in
+            guard let context = context else { return }
+            let engine = Unmanaged<KeyboardBacklightEngine>.fromOpaque(context).takeUnretainedValue()
+            Task { @MainActor in
+                engine.handleDeviceAttached(device)
+            }
+        }
+        
+        let removalCallback: IOHIDDeviceCallback = { context, result, sender, device in
+            guard let context = context else { return }
+            let engine = Unmanaged<KeyboardBacklightEngine>.fromOpaque(context).takeUnretainedValue()
+            Task { @MainActor in
+                engine.handleDeviceRemoved(device)
+            }
+        }
+        
+        IOHIDManagerRegisterDeviceMatchingCallback(manager, matchCallback, selfPtr)
+        IOHIDManagerRegisterDeviceRemovalCallback(manager, removalCallback, selfPtr)
+        IOHIDManagerScheduleWithRunLoop(manager, CFRunLoopGetMain(), CFRunLoopMode.defaultMode.rawValue)
+        
+        let openResult = IOHIDManagerOpen(manager, IOOptionBits(kIOHIDOptionsTypeNone))
+        if openResult != kIOReturnSuccess {
+            print("[Lumos] Warning: IOHIDManagerOpen returned \(openResult)")
+        }
+        
         refreshDirectDevices()
     }
     
+    public func handleDeviceAttached(_ dev: IOHIDDevice) {
+        print("[Lumos] IOHIDDevice matching callback triggered for backlight controller.")
+        let openRet = IOHIDDeviceOpen(dev, IOOptionBits(kIOHIDOptionsTypeNone))
+        if openRet != kIOReturnSuccess && openRet != kIOReturnStillOpen {
+            print("[Lumos] Note: IOHIDDeviceOpen returned \(openRet)")
+        }
+        
+        if !directDevices.contains(where: { $0 === dev }) {
+            directDevices.append(dev)
+        }
+        
+        if let prod = IOHIDDeviceGetProperty(dev, kIOHIDProductKey as CFString) as? String {
+            self.hardwareModel = prod
+        }
+        self.isHardwareAvailable = !directDevices.isEmpty
+        print("[Lumos] Device attached. Total active devices: \(directDevices.count)")
+        
+        if !isSystemSleeping && !isScreenSleeping && !isLidClosed && isOn {
+            applyBrightnessToHardware(brightness)
+        }
+    }
+    
+    public func handleDeviceRemoved(_ dev: IOHIDDevice) {
+        print("[Lumos] IOHIDDevice removal callback triggered.")
+        IOHIDDeviceClose(dev, IOOptionBits(kIOHIDOptionsTypeNone))
+        directDevices.removeAll(where: { $0 === dev })
+        self.isHardwareAvailable = !directDevices.isEmpty
+        print("[Lumos] Device removed. Remaining active devices: \(directDevices.count)")
+    }
+    
+    public func reconnectHardware(reapplyBrightness: Bool = true) {
+        print("[Lumos] Reconnecting keyboard backlight hardware subsystem...")
+        setupDirectHID()
+        if reapplyBrightness && !isSystemSleeping && !isScreenSleeping && !isLidClosed && isOn {
+            applyBrightnessToHardware(brightness)
+        }
+    }
+    
     public func refreshDirectDevices() {
-        guard let manager = hidManager else { return }
+        guard let manager = hidManager else {
+            setupDirectHID()
+            return
+        }
+        
+        for dev in directDevices {
+            IOHIDDeviceClose(dev, IOOptionBits(kIOHIDOptionsTypeNone))
+        }
         directDevices.removeAll()
         
         if let devSet = IOHIDManagerCopyDevices(manager) {
@@ -127,10 +219,14 @@ public final class KeyboardBacklightEngine: ObservableObject {
             for ptr in devArray {
                 guard let ptr = ptr else { continue }
                 let dev = unsafeBitCast(ptr, to: IOHIDDevice.self)
-                _ = IOHIDDeviceOpen(dev, IOOptionBits(kIOHIDOptionsTypeNone))
-                directDevices.append(dev)
-                if let prod = IOHIDDeviceGetProperty(dev, kIOHIDProductKey as CFString) as? String {
-                    self.hardwareModel = prod
+                let openRet = IOHIDDeviceOpen(dev, IOOptionBits(kIOHIDOptionsTypeNone))
+                if openRet == kIOReturnSuccess || openRet == kIOReturnStillOpen {
+                    directDevices.append(dev)
+                    if let prod = IOHIDDeviceGetProperty(dev, kIOHIDProductKey as CFString) as? String {
+                        self.hardwareModel = prod
+                    }
+                } else {
+                    print("[Lumos] Note: Failed to open device: \(openRet)")
                 }
             }
         }
@@ -141,6 +237,45 @@ public final class KeyboardBacklightEngine: ObservableObject {
     
     // MARK: - Sleep, Display & Clamshell Listeners (Repouso, Tela desligada, Tampa fechada)
     
+    public func scheduleWakeReconnectionSequence() {
+        print("[Lumos] Initiating wake reconnection sequence...")
+        wakeRetryTask?.cancel()
+        
+        // Immediate probe (0ms)
+        self.reconnectHardware(reapplyBrightness: false)
+        self.evaluateBacklightPowerState()
+        
+        wakeRetryTask = Task { @MainActor in
+            // Stage 1: 400ms (typical USB/SPI power-up window)
+            try? await Task.sleep(nanoseconds: 400_000_000)
+            guard !Task.isCancelled, !self.isSystemSleeping, !self.isScreenSleeping, !self.isLidClosed else { return }
+            if !self.isHardwareAvailable {
+                print("[Lumos] [Wake +400ms] Hardware not yet ready, re-probing devices...")
+                self.reconnectHardware(reapplyBrightness: true)
+            } else if self.isOn {
+                self.applyBrightnessToHardware(self.brightness)
+            }
+            
+            // Stage 2: 1200ms (deep sleep / standby tier 1 recovery)
+            try? await Task.sleep(nanoseconds: 800_000_000)
+            guard !Task.isCancelled, !self.isSystemSleeping, !self.isScreenSleeping, !self.isLidClosed else { return }
+            if !self.isHardwareAvailable {
+                print("[Lumos] [Wake +1200ms] Deep sleep wake probe...")
+                self.reconnectHardware(reapplyBrightness: true)
+            } else if self.isOn {
+                self.applyBrightnessToHardware(self.brightness)
+            }
+            
+            // Stage 3: 2500ms (hibernation / tier 2 safety check)
+            try? await Task.sleep(nanoseconds: 1_300_000_000)
+            guard !Task.isCancelled, !self.isSystemSleeping, !self.isScreenSleeping, !self.isLidClosed else { return }
+            if !self.isHardwareAvailable {
+                print("[Lumos] [Wake +2500ms] Final safety probe...")
+                self.reconnectHardware(reapplyBrightness: true)
+            }
+        }
+    }
+    
     private func setupSleepWakeListeners() {
         let center = NSWorkspace.shared.notificationCenter
         
@@ -150,6 +285,7 @@ public final class KeyboardBacklightEngine: ObservableObject {
                 Task { @MainActor [weak self] in
                     guard let self = self else { return }
                     print("[Lumos] System entering sleep. Turning off keyboard backlight...")
+                    self.wakeRetryTask?.cancel()
                     self.isSystemSleeping = true
                     self.evaluateBacklightPowerState()
                 }
@@ -162,8 +298,7 @@ public final class KeyboardBacklightEngine: ObservableObject {
                     guard let self = self else { return }
                     print("[Lumos] System woke up from sleep. Evaluating backlight...")
                     self.isSystemSleeping = false
-                    self.refreshDirectDevices()
-                    self.evaluateBacklightPowerState()
+                    self.scheduleWakeReconnectionSequence()
                 }
             }
             .store(in: &cancellables)
@@ -174,6 +309,7 @@ public final class KeyboardBacklightEngine: ObservableObject {
                 Task { @MainActor [weak self] in
                     guard let self = self else { return }
                     print("[Lumos] Display turned off. Turning off keyboard backlight...")
+                    self.wakeRetryTask?.cancel()
                     self.isScreenSleeping = true
                     self.evaluateBacklightPowerState()
                 }
@@ -186,7 +322,7 @@ public final class KeyboardBacklightEngine: ObservableObject {
                     guard let self = self else { return }
                     print("[Lumos] Display turned on. Evaluating backlight...")
                     self.isScreenSleeping = false
-                    self.evaluateBacklightPowerState()
+                    self.scheduleWakeReconnectionSequence()
                 }
             }
             .store(in: &cancellables)
@@ -238,7 +374,12 @@ public final class KeyboardBacklightEngine: ObservableObject {
         if self.isLidClosed != closed {
             self.isLidClosed = closed
             print("[Lumos] MacBook lid state changed: closed = \(closed)")
-            evaluateBacklightPowerState()
+            if !closed {
+                scheduleWakeReconnectionSequence()
+            } else {
+                wakeRetryTask?.cancel()
+                evaluateBacklightPowerState()
+            }
         }
     }
     
@@ -304,7 +445,7 @@ public final class KeyboardBacklightEngine: ObservableObject {
     
     private var pendingDuration: UInt32 = 0
     
-    public func applyBrightnessToHardware(_ normalized: Double, duration: UInt32? = nil) {
+    public func applyBrightnessToHardware(_ normalized: Double, duration: UInt32? = nil, isRetry: Bool = false) {
         let isExtKeyboardOff = ExternalKeyboardMonitor.shared.hasExternalKeyboard && LumosSettings.shared.disableOnExternalKeyboard
         if ((LumosSettings.shared.sleepWithDisplayAndClamshell && (isSystemSleeping || isScreenSleeping || isLidClosed)) || isExtKeyboardOff) && normalized > 0.001 {
             print("[Lumos] Blocked hardware brightness \(normalized) because external keyboard is active or system/display is sleeping.")
@@ -340,6 +481,7 @@ public final class KeyboardBacklightEngine: ObservableObject {
         }
         
         var success = false
+        var failedDevices: [IOHIDDevice] = []
         for dev in directDevices {
             let ret = buffer.withUnsafeBytes { ptr -> IOReturn in
                 guard let base = ptr.baseAddress else { return kIOReturnError }
@@ -355,13 +497,29 @@ public final class KeyboardBacklightEngine: ObservableObject {
                 success = true
             } else {
                 print("[Lumos] IOHIDDeviceSetReport error: \(ret)")
+                failedDevices.append(dev)
             }
+        }
+        
+        if !failedDevices.isEmpty {
+            for dev in failedDevices {
+                IOHIDDeviceClose(dev, IOOptionBits(kIOHIDOptionsTypeNone))
+                directDevices.removeAll(where: { $0 === dev })
+            }
+            self.isHardwareAvailable = !directDevices.isEmpty
         }
         
         if success {
             print("[Lumos] Successfully set hardware brightness to \(rawVal)/512 (norm: \(String(format: "%.2f", normalized)))")
         } else {
             print("[Lumos] Failed to send report (devices: \(directDevices.count))")
+            if !isRetry {
+                print("[Lumos] Hardware set report failed. Attempting self-healing recovery...")
+                reconnectHardware(reapplyBrightness: false)
+                if !directDevices.isEmpty {
+                    applyBrightnessToHardware(normalized, duration: dur, isRetry: true)
+                }
+            }
         }
     }
     

@@ -489,6 +489,24 @@ public struct SettingsView: View {
                         .fontWeight(.medium)
                     }
                     .font(.caption)
+                    
+                    Divider()
+                        .padding(.vertical, 2)
+                    
+                    HStack {
+                        Text("hardware_reconnect_desc")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                        Spacer()
+                        Button {
+                            engine.reconnectHardware()
+                        } label: {
+                            Label("hardware_reconnect_button", systemImage: "arrow.clockwise")
+                                .font(.caption)
+                        }
+                        .buttonStyle(.bordered)
+                        .controlSize(.small)
+                    }
                 }
                 .padding(12)
                 .background(
@@ -502,7 +520,8 @@ public struct SettingsView: View {
             
             // Footer
             HStack {
-                Text("Lumos v1.5 • macOS")
+                let version = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.6"
+                Text("Lumos v\(version) • macOS")
                     .font(.caption2)
                     .foregroundStyle(.tertiary)
                 Spacer()
